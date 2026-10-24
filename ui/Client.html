@@ -1,0 +1,46 @@
+<script>
+  (function () {
+    var statusEl = document.getElementById('status');
+    var metaEl = document.getElementById('meta');
+    var roleEl = document.getElementById('role');
+    var emailEl = document.getElementById('email');
+    var sheetEl = document.getElementById('sheet');
+
+    function rolMetni(rol) {
+      if (rol === 'patron') return 'Patron';
+      if (rol === 'personel') return 'Personel';
+      return 'Misafir (iskelet)';
+    }
+
+    function goster(bilgi) {
+      statusEl.textContent = bilgi.message || 'Merhaba Aqua Tekel';
+      roleEl.textContent = rolMetni(bilgi.role);
+      emailEl.textContent = bilgi.userEmail || '—';
+      sheetEl.textContent = bilgi.spreadsheetConfigured
+        ? 'Tanımlı (test)'
+        : 'Henüz yok (YOUR_SPREADSHEET_ID)';
+      metaEl.hidden = false;
+    }
+
+    function hata(mesaj) {
+      statusEl.textContent = mesaj || 'Panel bilgisi alınamadı.';
+    }
+
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(goster)
+        .withFailureHandler(function () {
+          hata('Bağlantı hatası. Sayfayı yenileyin.');
+        })
+        .getPanelData();
+    } else {
+      // Yerel önizleme / şablon dışı
+      goster({
+        message: 'Merhaba Aqua Tekel',
+        role: 'misafir',
+        userEmail: '',
+        spreadsheetConfigured: false
+      });
+    }
+  })();
+</script>

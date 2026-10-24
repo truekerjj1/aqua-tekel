@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <base target="_top" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><?= brandName ?></title>
+    <?!= include('ui/Styles'); ?>
+  </head>
+  <body>
+    <div class="page">
+      <header class="top">
+        <p class="badge"><?= environmentLabel ?></p>
+        <h1 class="brand"><?= brandName ?></h1>
+        <p class="lead">Merhaba Aqua Tekel</p>
+        <p class="sub">Bu panel test içindir. Canlı muhasebe dosyasına bağlı değildir.</p>
+      </header>
+
+      <main class="panel" id="panel">
+        <p class="status" id="status">Yükleniyor…</p>
+        <dl class="meta" id="meta" hidden>
+          <div>
+            <dt>Rol</dt>
+            <dd id="role">—</dd>
+          </div>
+          <div>
+            <dt>Kullanıcı</dt>
+            <dd id="email">—</dd>
+          </div>
+          <div>
+            <dt>Tablo ayarı</dt>
+            <dd id="sheet">—</dd>
+          </div>
+        </dl>
+        <p class="hint">Gelir, gider ve tedarikçi işlemleri sonraki adımlarda eklenecek.</p>
+      </main>
+    </div>
+    <?!= include('ui/Client'); ?>
+  </body>
+</html>

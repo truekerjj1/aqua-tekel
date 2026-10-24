@@ -1,0 +1,18 @@
+# Gerçek clasp ayarı — buraya yazmayın; example dosyasını kopyalayın
+.clasp.json
+
+# Gizli bilgiler / yerel ayarlar
+.env
+.env.*
+*.local
+credentials.json
+token.json
+.clasprc.json
+
+# Sistem / editör
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
