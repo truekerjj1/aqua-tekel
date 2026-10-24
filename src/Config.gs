@@ -3,10 +3,12 @@
  *
  * ÖNEMLİ: Canlı muhasebe dosyasına bağlanmayın.
  * Spreadsheet ID'yi siz dolduracaksınız; şimdilik yer tutucu bırakılmıştır.
+ * Test sayfaları için Bootstrap.gs aktif tabloyu kullanır (ID gerekmez).
  */
 
 var CONFIG = {
   // Yer tutucu — kendi test tablonuzun ID'sini buraya yazın (URL'deki /d/ ile /edit/ arası)
+  // Şimdilik boş bırakın; Bootstrap aktif sheet ile çalışır.
   SPREADSHEET_ID: 'YOUR_SPREADSHEET_ID',
 
   // Test ortamı etiketi (panelde görünür)
@@ -20,7 +22,9 @@ var CONFIG = {
     GELIR: 'Gelir',
     GIDER: 'Gider',
     TEDARIKCILER: 'Tedarikçiler',
-    AYARLAR: 'Ayarlar'
+    FATURALAR: 'Faturalar',
+    ODEMELER: 'Odemeler',
+    KULLANICILAR: 'Kullanicilar'
   }
 };
 
