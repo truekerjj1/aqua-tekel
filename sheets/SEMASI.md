@@ -114,3 +114,6 @@ Aynı anahtar zaten varsa yeni kayıt eklenmez; Türkçe uyarı döner.
 
 Tablo menüsü: **Aqua Tekel (Test)** → **Test sayfalarını kur**  
 veya `setupTestSheets()` çalıştırın. Eksik sayfalar ve başlık satırları oluşturulur.
+
+Örnek satırlar: menü → **Örnek test verisi yükle** (`loadSampleTestData` in `src/SampleData.gs`).  
+Aktif tabloya 2–3 tedarikçi / fatura / ödeme / gelir / gider yazar; sonra `refreshSupplierBalances()` çağırır.

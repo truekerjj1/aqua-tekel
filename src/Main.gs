@@ -14,6 +14,7 @@ function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu('Aqua Tekel (Test)')
     .addItem('Test sayfalarını kur', 'setupTestSheets')
+    .addItem('Örnek test verisi yükle', 'loadSampleTestData')
     .addItem('Paneli aç (talimat)', 'showPanelOpenInstructions')
     .addToUi();
 }
@@ -67,9 +68,86 @@ function include(filename) {
 
 /**
  * İstemciden çağrılabilir: panel özeti.
- * Aktif tabloya bağlanmaz; rol ve yapılandırma bilgisini döner.
+ * Rol / yapılandırma + gelir / gider / tedarikçi borç toplamları
+ * (listIncome, listExpense, listSuppliers üzerinden).
  * @return {Object}
  */
 function getPanelData() {
-  return getAppInfo();
+  var info = getAppInfo();
+  info.summary = getPanelSummary();
+  return info;
+}
+
+/**
+ * Özet sekmesi için toplamlar (mevcut liste fonksiyonlarından).
+ * @return {{
+ *   ok: boolean,
+ *   message: string,
+ *   gelirToplam: number,
+ *   giderToplam: number,
+ *   tedarikciBorcToplam: number,
+ *   tedarikciler: Array<{ad: string, kalanBorc: number}>
+ * }}
+ */
+function getPanelSummary() {
+  var gelirToplam = 0;
+  var giderToplam = 0;
+  var tedarikciBorcToplam = 0;
+  var tedarikciler = [];
+  var i;
+  var messages = [];
+
+  var income = listIncome({});
+  if (income && income.ok) {
+    for (i = 0; i < income.rows.length; i++) {
+      var gt = parseTutar(income.rows[i].tutar);
+      if (!isNaN(gt)) {
+        gelirToplam += gt;
+      }
+    }
+  } else if (income && income.message) {
+    messages.push(income.message);
+  }
+
+  var expense = listExpense({});
+  if (expense && expense.ok) {
+    for (i = 0; i < expense.rows.length; i++) {
+      var xt = parseTutar(expense.rows[i].tutar);
+      if (!isNaN(xt)) {
+        giderToplam += xt;
+      }
+    }
+  } else if (expense && expense.message) {
+    messages.push(expense.message);
+  }
+
+  var suppliers = listSuppliers();
+  if (suppliers && suppliers.ok) {
+    for (i = 0; i < suppliers.rows.length; i++) {
+      var s = suppliers.rows[i];
+      var borc = parseTutar(s.kalanBorc);
+      if (isNaN(borc)) {
+        borc = 0;
+      }
+      tedarikciBorcToplam += borc;
+      tedarikciler.push({
+        ad: s.ad,
+        kalanBorc: borc
+      });
+    }
+  } else if (suppliers && suppliers.message) {
+    messages.push(suppliers.message);
+  }
+
+  var ok = !!(income && income.ok) || !!(expense && expense.ok) ||
+    !!(suppliers && suppliers.ok);
+
+  return {
+    ok: ok || messages.length === 0,
+    message: messages.length ? messages[0] : 'Tamam',
+    gelirToplam: gelirToplam,
+    giderToplam: giderToplam,
+    tedarikciBorcToplam: tedarikciBorcToplam,
+    tedarikciler: tedarikciler
+  };
 }

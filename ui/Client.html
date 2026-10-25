@@ -6,6 +6,11 @@
     var emailEl = document.getElementById('email');
     var sheetEl = document.getElementById('sheet');
     var yazmaEl = document.getElementById('yazma');
+    var summaryEl = document.getElementById('summary-totals');
+    var sumGelirEl = document.getElementById('sum-gelir');
+    var sumGiderEl = document.getElementById('sum-gider');
+    var sumBorcEl = document.getElementById('sum-borc');
+    var listBorcOzet = document.getElementById('list-borc-ozet');
     var tabs = document.querySelectorAll('.tab');
     var panels = {
       ozet: document.getElementById('panel-ozet'),
@@ -24,6 +29,42 @@
       return 'Misafir';
     }
 
+    function formatTutar(n) {
+      if (n == null || isNaN(Number(n))) return '—';
+      var x = Number(n);
+      return (Math.round(x * 100) / 100).toLocaleString('tr-TR');
+    }
+
+    function gosterBorcOzeti(summary) {
+      if (!summaryEl || !sumGelirEl || !sumGiderEl || !sumBorcEl) return;
+      if (!summary) {
+        summaryEl.hidden = true;
+        if (listBorcOzet) listBorcOzet.hidden = true;
+        return;
+      }
+      sumGelirEl.textContent = formatTutar(summary.gelirToplam);
+      sumGiderEl.textContent = formatTutar(summary.giderToplam);
+      sumBorcEl.textContent = formatTutar(summary.tedarikciBorcToplam);
+      summaryEl.hidden = false;
+
+      if (!listBorcOzet) return;
+      var items = summary.tedarikciler || [];
+      if (!items.length) {
+        listBorcOzet.hidden = true;
+        listBorcOzet.innerHTML = '';
+        return;
+      }
+      listBorcOzet.hidden = false;
+      renderList('list-borc-ozet', items, function (r) {
+        return (
+          '<strong>' + (r.ad || '') + '</strong>' +
+          '<div class="muted">Kalan borç: <strong>' +
+          formatTutar(r.kalanBorc) +
+          '</strong></div>'
+        );
+      });
+    }
+
     function gosterOzet(bilgi) {
       statusEl.textContent = bilgi.message || 'Merhaba Aqua Tekel';
       roleEl.textContent = rolMetni(bilgi.role);
@@ -35,6 +76,7 @@
           : 'Henüz yok (YOUR_SPREADSHEET_ID)';
       yazmaEl.textContent = bilgi.canWrite ? 'Açık (patron/personel)' : 'Kapalı (misafir)';
       metaEl.hidden = false;
+      gosterBorcOzeti(bilgi.summary);
     }
 
     function hata(mesaj) {
@@ -58,9 +100,20 @@
           el.classList.remove('is-active');
         }
       });
+      if (name === 'ozet') loadOzet();
       if (name === 'gelir') loadGelir();
       if (name === 'gider') loadGider();
       if (name === 'tedarikci') loadTedarikci();
+    }
+
+    function loadOzet() {
+      if (!hasGas()) return;
+      google.script.run
+        .withSuccessHandler(gosterOzet)
+        .withFailureHandler(function () {
+          hata('Özet yenilenemedi.');
+        })
+        .getPanelData();
     }
 
     tabs.forEach(function (btn) {
