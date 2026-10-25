@@ -24,7 +24,8 @@ Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / panel talimat
 
 ## PC kapalıyken / eve dönüş
 
-Kısa özet: [docs/PC-KAPALI-ILERLEME.md](./docs/PC-KAPALI-ILERLEME.md)
+**Eve dönünce (Windows) adım adım:** [docs/EVE-DONUNCE.md](./docs/EVE-DONUNCE.md)  
+Kısa özet (PC kapalıyken ne yapıldı): [docs/PC-KAPALI-ILERLEME.md](./docs/PC-KAPALI-ILERLEME.md)
 
 ---
 
@@ -63,6 +64,7 @@ aqua-tekel/
 ├── .clasp.json.example
 ├── .gitignore
 ├── docs/
+│   ├── EVE-DONUNCE.md
 │   └── PC-KAPALI-ILERLEME.md
 ├── sheets/
 │   └── SEMASI.md
@@ -76,6 +78,7 @@ aqua-tekel/
 │   ├── Suppliers.gs
 │   ├── Invoices.gs
 │   ├── Payments.gs
+│   ├── SampleData.gs
 │   ├── Dedup.gs
 │   └── Utils.gs
 └── ui/
