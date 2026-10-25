@@ -105,8 +105,11 @@ KalanBorc(tedarikçi) = Σ Faturalar.Tutar(tedarikçi) − Σ Odemeler.Tutar(ted
 |-----|---------|
 | Gelir / Gider | `Tarih` + `Tutar` + `Açıklama` (normalize: trim, küçük harf) |
 | Fatura | `FaturaNo` + `Tedarikçi` |
+| Ödeme | `Tarih` + `Tedarikçi` + `Tutar` + `FaturaNo` |
 
-Aynı anahtar zaten varsa yeni kayıt eklenmez; Türkçe uyarı döner.
+Aynı anahtar zaten varsa yeni kayıt eklenmez; Türkçe uyarı döner.  
+Güncellemede kendi satırı (`excludeRow`) hariç tutulur. Tutar `> 0` olmalıdır.  
+Fatura / ödeme / (dolu ise) gider tedarikçisi `Tedarikçiler!Ad` içinde bulunmalıdır.
 
 ---
 

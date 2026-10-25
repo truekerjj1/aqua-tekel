@@ -28,6 +28,7 @@ Her dosya için: sol panelde **+** → **Script** → adı aşağıdaki gibi yaz
 | `Suppliers` | `src/Suppliers.gs` |
 | `Invoices` | `src/Invoices.gs` |
 | `Payments` | `src/Payments.gs` |
+| `SampleData` | `src/SampleData.gs` |
 | `Dedup` | `src/Dedup.gs` |
 | `Utils` | `src/Utils.gs` |
 

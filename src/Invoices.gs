@@ -19,42 +19,59 @@ function addInvoice(kayit) {
   kayit = kayit || {};
   var faturaNo = String(kayit.faturaNo || '').trim();
   var tedarikci = String(kayit.tedarikci || '').trim();
-  var tutar = parseTutar(kayit.tutar);
 
-  if (!faturaNo || !kayit.tarih || !tedarikci || isNaN(tutar)) {
+  if (!faturaNo || !kayit.tarih || !tedarikci) {
     return {
       ok: false,
       message: 'Fatura için fatura no, tarih, tedarikçi ve tutar gerekli.'
     };
   }
 
-  var dedup = checkDedup({
-    faturaNo: faturaNo,
-    tedarikci: tedarikci
-  }, 'fatura');
-  if (!dedup.ok) {
-    return dedup;
+  var tutarCheck = requirePositiveTutar(kayit.tutar);
+  if (!tutarCheck.ok) {
+    return { ok: false, message: tutarCheck.message };
+  }
+  var tutar = tutarCheck.tutar;
+
+  var supplierErr = requireExistingSupplier(tedarikci);
+  if (supplierErr) {
+    return supplierErr;
   }
 
-  var cfg = getConfig();
-  var got = getSandboxSheet(cfg.SHEETS.FATURALAR);
-  if (!got.ok) {
-    return { ok: false, message: got.message };
-  }
+  return withDocumentLock(function () {
+    var supplierErrLocked = requireExistingSupplier(tedarikci);
+    if (supplierErrLocked) {
+      return supplierErrLocked;
+    }
 
-  got.sheet.appendRow([
-    faturaNo,
-    kayit.tarih,
-    tedarikci,
-    tutar,
-    kayit.vade || '',
-    kayit.durum || 'Açık',
-    kayit.not || ''
-  ]);
+    var dedup = checkDedup({
+      faturaNo: faturaNo,
+      tedarikci: tedarikci
+    }, 'fatura');
+    if (!dedup.ok) {
+      return dedup;
+    }
 
-  refreshSupplierBalances(tedarikci);
+    var cfg = getConfig();
+    var got = getSandboxSheet(cfg.SHEETS.FATURALAR);
+    if (!got.ok) {
+      return { ok: false, message: got.message };
+    }
 
-  return { ok: true, message: 'Fatura kaydı eklendi.' };
+    got.sheet.appendRow([
+      faturaNo,
+      kayit.tarih,
+      tedarikci,
+      tutar,
+      kayit.vade || '',
+      kayit.durum || 'Açık',
+      kayit.not || ''
+    ]);
+
+    refreshSupplierBalances(tedarikci);
+
+    return { ok: true, message: 'Fatura kaydı eklendi.' };
+  });
 }
 
 /**
@@ -115,44 +132,61 @@ function updateInvoice(id, kayit) {
     return { ok: false, message: 'Geçersiz satır numarası.' };
   }
 
-  var cfg = getConfig();
-  var got = getSandboxSheet(cfg.SHEETS.FATURALAR);
-  if (!got.ok) {
-    return { ok: false, message: got.message };
-  }
+  return withDocumentLock(function () {
+    var cfg = getConfig();
+    var got = getSandboxSheet(cfg.SHEETS.FATURALAR);
+    if (!got.ok) {
+      return { ok: false, message: got.message };
+    }
 
-  if (rowNum > got.sheet.getLastRow()) {
-    return { ok: false, message: 'Fatura satırı bulunamadı.' };
-  }
+    if (rowNum > got.sheet.getLastRow()) {
+      return { ok: false, message: 'Fatura satırı bulunamadı.' };
+    }
 
-  var existing = got.sheet.getRange(rowNum, 1, rowNum, 7).getValues()[0];
-  var faturaNo = kayit.faturaNo !== undefined
-    ? String(kayit.faturaNo).trim()
-    : existing[0];
-  var tarih = kayit.tarih !== undefined ? kayit.tarih : existing[1];
-  var tedarikci = kayit.tedarikci !== undefined
-    ? String(kayit.tedarikci).trim()
-    : existing[2];
-  var tutar = kayit.tutar !== undefined ? parseTutar(kayit.tutar) : existing[3];
-  var vade = kayit.vade !== undefined ? kayit.vade : existing[4];
-  var durum = kayit.durum !== undefined ? kayit.durum : existing[5];
-  var not = kayit.not !== undefined ? kayit.not : existing[6];
+    var existing = got.sheet.getRange(rowNum, 1, rowNum, 7).getValues()[0];
+    var faturaNo = kayit.faturaNo !== undefined
+      ? String(kayit.faturaNo).trim()
+      : existing[0];
+    var tarih = kayit.tarih !== undefined ? kayit.tarih : existing[1];
+    var tedarikci = kayit.tedarikci !== undefined
+      ? String(kayit.tedarikci).trim()
+      : existing[2];
+    var tutarRaw = kayit.tutar !== undefined ? kayit.tutar : existing[3];
+    var vade = kayit.vade !== undefined ? kayit.vade : existing[4];
+    var durum = kayit.durum !== undefined ? kayit.durum : existing[5];
+    var not = kayit.not !== undefined ? kayit.not : existing[6];
 
-  if (!faturaNo || !tedarikci) {
-    return { ok: false, message: 'Fatura no ve tedarikçi boş olamaz.' };
-  }
-  if (isNaN(parseTutar(tutar))) {
-    return { ok: false, message: 'Geçersiz tutar.' };
-  }
+    if (!faturaNo || !tedarikci) {
+      return { ok: false, message: 'Fatura no ve tedarikçi boş olamaz.' };
+    }
 
-  got.sheet.getRange(rowNum, 1, rowNum, 7).setValues([[
-    faturaNo, tarih, tedarikci, parseTutar(tutar), vade, durum, not
-  ]]);
+    var tutarCheck = requirePositiveTutar(tutarRaw);
+    if (!tutarCheck.ok) {
+      return { ok: false, message: tutarCheck.message };
+    }
 
-  refreshSupplierBalances(tedarikci);
-  if (normalizeKeyPart(existing[2]) !== normalizeKeyPart(tedarikci)) {
-    refreshSupplierBalances(existing[2]);
-  }
+    var supplierErr = requireExistingSupplier(tedarikci);
+    if (supplierErr) {
+      return supplierErr;
+    }
 
-  return { ok: true, message: 'Fatura kaydı güncellendi.' };
+    var dedup = checkDedup({
+      faturaNo: faturaNo,
+      tedarikci: tedarikci
+    }, 'fatura', rowNum);
+    if (!dedup.ok) {
+      return dedup;
+    }
+
+    got.sheet.getRange(rowNum, 1, rowNum, 7).setValues([[
+      faturaNo, tarih, tedarikci, tutarCheck.tutar, vade, durum, not
+    ]]);
+
+    refreshSupplierBalances(tedarikci);
+    if (normalizeKeyPart(existing[2]) !== normalizeKeyPart(tedarikci)) {
+      refreshSupplierBalances(existing[2]);
+    }
+
+    return { ok: true, message: 'Fatura kaydı güncellendi.' };
+  });
 }

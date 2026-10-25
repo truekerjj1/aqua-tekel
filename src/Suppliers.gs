@@ -100,6 +100,64 @@ function refreshSupplierBalances(ad) {
 }
 
 /**
+ * Tedarikçiler sayfasında ad var mı? (normalize karşılaştırması; grup eşleme yok).
+ * @param {string} ad
+ * @return {boolean}
+ */
+function supplierExists(ad) {
+  var key = normalizeKeyPart(ad);
+  if (!key) {
+    return false;
+  }
+  var cfg = getConfig();
+  var got = getSandboxSheet(cfg.SHEETS.TEDARIKCILER);
+  if (!got.ok) {
+    return false;
+  }
+  var rows = getDataRows(got.sheet);
+  for (var i = 0; i < rows.length; i++) {
+    if (normalizeKeyPart(rows[i][0]) === key) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Tedarikçi adı zorunlu ve kayıtlı olmalı.
+ * @param {*} ad
+ * @return {{ok: boolean, message: string}|null} null = geçerli
+ */
+function requireExistingSupplier(ad) {
+  var name = String(ad || '').trim();
+  if (!name) {
+    return { ok: false, message: 'Tedarikçi adı gerekli.' };
+  }
+  if (!supplierExists(name)) {
+    return {
+      ok: false,
+      message:
+        'Tedarikçi bulunamadı: "' + name +
+        '". Önce Tedarikçi sekmesinden / Tedarikçiler sayfasına ekleyin.'
+    };
+  }
+  return null;
+}
+
+/**
+ * Gider gibi alanlarda: ad boşsa serbest; doluysa kayıtlı olmalı.
+ * @param {*} ad
+ * @return {{ok: boolean, message: string}|null} null = geçerli
+ */
+function requireSupplierIfProvided(ad) {
+  var name = String(ad || '').trim();
+  if (!name) {
+    return null;
+  }
+  return requireExistingSupplier(name);
+}
+
+/**
  * Tedarikçi ekler.
  * @param {Object} tedarikci — {ad, telefon, not}
  * @return {{ok: boolean, message: string}}
@@ -116,31 +174,33 @@ function addSupplier(tedarikci) {
     return { ok: false, message: 'Tedarikçi adı gerekli.' };
   }
 
-  var cfg = getConfig();
-  var got = getSandboxSheet(cfg.SHEETS.TEDARIKCILER);
-  if (!got.ok) {
-    return { ok: false, message: got.message };
-  }
-
-  var rows = getDataRows(got.sheet);
-  for (var i = 0; i < rows.length; i++) {
-    if (normalizeKeyPart(rows[i][0]) === normalizeKeyPart(ad)) {
-      return {
-        ok: false,
-        message: 'Bu tedarikçi adı zaten var: ' + ad
-      };
+  return withDocumentLock(function () {
+    var cfg = getConfig();
+    var got = getSandboxSheet(cfg.SHEETS.TEDARIKCILER);
+    if (!got.ok) {
+      return { ok: false, message: got.message };
     }
-  }
 
-  var kalan = computeSupplierBalance(ad, got.ss);
-  got.sheet.appendRow([
-    ad,
-    tedarikci.telefon || '',
-    tedarikci.not || '',
-    kalan
-  ]);
+    var rows = getDataRows(got.sheet);
+    for (var i = 0; i < rows.length; i++) {
+      if (normalizeKeyPart(rows[i][0]) === normalizeKeyPart(ad)) {
+        return {
+          ok: false,
+          message: 'Bu tedarikçi adı zaten var: ' + ad
+        };
+      }
+    }
 
-  return { ok: true, message: 'Tedarikçi eklendi.' };
+    var kalan = computeSupplierBalance(ad, got.ss);
+    got.sheet.appendRow([
+      ad,
+      tedarikci.telefon || '',
+      tedarikci.not || '',
+      kalan
+    ]);
+
+    return { ok: true, message: 'Tedarikçi eklendi.' };
+  });
 }
 
 /**
@@ -191,38 +251,40 @@ function updateSupplier(id, tedarikci) {
     return { ok: false, message: 'Geçersiz satır numarası.' };
   }
 
-  var cfg = getConfig();
-  var got = getSandboxSheet(cfg.SHEETS.TEDARIKCILER);
-  if (!got.ok) {
-    return { ok: false, message: got.message };
-  }
-
-  if (rowNum > got.sheet.getLastRow()) {
-    return { ok: false, message: 'Tedarikçi satırı bulunamadı.' };
-  }
-
-  var existing = got.sheet.getRange(rowNum, 1, rowNum, 4).getValues()[0];
-  var ad = tedarikci.ad !== undefined ? String(tedarikci.ad).trim() : existing[0];
-  var telefon = tedarikci.telefon !== undefined ? tedarikci.telefon : existing[1];
-  var not = tedarikci.not !== undefined ? tedarikci.not : existing[2];
-
-  if (!ad) {
-    return { ok: false, message: 'Tedarikçi adı boş olamaz.' };
-  }
-
-  var others = getDataRows(got.sheet);
-  for (var i = 0; i < others.length; i++) {
-    var otherRow = i + 2;
-    if (otherRow === rowNum) {
-      continue;
+  return withDocumentLock(function () {
+    var cfg = getConfig();
+    var got = getSandboxSheet(cfg.SHEETS.TEDARIKCILER);
+    if (!got.ok) {
+      return { ok: false, message: got.message };
     }
-    if (normalizeKeyPart(others[i][0]) === normalizeKeyPart(ad)) {
-      return { ok: false, message: 'Bu tedarikçi adı zaten var: ' + ad };
+
+    if (rowNum > got.sheet.getLastRow()) {
+      return { ok: false, message: 'Tedarikçi satırı bulunamadı.' };
     }
-  }
 
-  var kalan = computeSupplierBalance(ad, got.ss);
-  got.sheet.getRange(rowNum, 1, rowNum, 4).setValues([[ad, telefon, not, kalan]]);
+    var existing = got.sheet.getRange(rowNum, 1, rowNum, 4).getValues()[0];
+    var ad = tedarikci.ad !== undefined ? String(tedarikci.ad).trim() : existing[0];
+    var telefon = tedarikci.telefon !== undefined ? tedarikci.telefon : existing[1];
+    var not = tedarikci.not !== undefined ? tedarikci.not : existing[2];
 
-  return { ok: true, message: 'Tedarikçi güncellendi.' };
+    if (!ad) {
+      return { ok: false, message: 'Tedarikçi adı boş olamaz.' };
+    }
+
+    var others = getDataRows(got.sheet);
+    for (var i = 0; i < others.length; i++) {
+      var otherRow = i + 2;
+      if (otherRow === rowNum) {
+        continue;
+      }
+      if (normalizeKeyPart(others[i][0]) === normalizeKeyPart(ad)) {
+        return { ok: false, message: 'Bu tedarikçi adı zaten var: ' + ad };
+      }
+    }
+
+    var kalan = computeSupplierBalance(ad, got.ss);
+    got.sheet.getRange(rowNum, 1, rowNum, 4).setValues([[ad, telefon, not, kalan]]);
+
+    return { ok: true, message: 'Tedarikçi güncellendi.' };
+  });
 }
