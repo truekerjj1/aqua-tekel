@@ -83,9 +83,11 @@ Yine: dosyayı açın → Raw → tümünü kopyala → yapıştır → kaydet.
 Tabloyu yenileyin. Üstte menü: **Aqua Tekel (Test)** → **Test sayfalarını kur**.
 
 Oluşur (yoksa): Gelir, Gider, Tedarikçiler, Faturalar, Odemeler, Kullanicilar.  
-Varsa dokunulmaz.
+Varsa dokunulmaz. Sütun ayrıntıları: [sheets/SEMASI.md](./sheets/SEMASI.md).
 
 **Paneli aç (talimat)** menüsü, Web App linkini nasıl bulacağınızı hatırlatır.
+
+Beklenen panel: **Test ortamı** rozeti + sekmeler **Özet / Gelir / Gider / Tedarikçi**.
 
 ---
 
@@ -93,4 +95,5 @@ Varsa dokunulmaz.
 
 - Canlı muhasebe tablosunu / script’ini açmayın.
 - “Anyone” / herkese açık erişim seçmeyin.
-- Spreadsheet veya Script ID uydurmayın; Config’deki `YOUR_SPREADSHEET_ID` şimdilik kalsın.
+- Spreadsheet veya Script ID uydurmayın; Config’deki `YOUR_SPREADSHEET_ID` şimdilik kalsın (CRUD için zorunlu değil).
+- `PATRON_EMAILS` / `PERSONEL_EMAILS` içindeki örnek e-postaları kendi test hesabınızla değiştirin.

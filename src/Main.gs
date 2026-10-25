@@ -66,7 +66,8 @@ function include(filename) {
 }
 
 /**
- * İstemciden çağrılabilir: panel özeti (sheet yazmaz/okumaz).
+ * İstemciden çağrılabilir: panel özeti.
+ * Aktif tabloya bağlanmaz; rol ve yapılandırma bilgisini döner.
  * @return {Object}
  */
 function getPanelData() {

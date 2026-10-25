@@ -4,6 +4,7 @@
  * Yalnızca script’in bağlı olduğu aktif tabloya yazar
  * (SpreadsheetApp.getActiveSpreadsheet).
  * Canlı muhasebe ID’si kullanılmaz; ID uydurulmaz.
+ * Başlıklar sheets/SEMASI.md ve Config.HEADERS ile uyumludur.
  */
 
 /**
@@ -21,15 +22,15 @@ var TEST_SAYFALARI = [
   },
   {
     ad: 'Tedarikçiler',
-    basliklar: ['Ad', 'Telefon', 'Not', 'Bakiye']
+    basliklar: ['Ad', 'Telefon', 'Not', 'KalanBorc']
   },
   {
     ad: 'Faturalar',
-    basliklar: ['Tarih', 'Tedarikçi', 'Tutar', 'Vade', 'Durum', 'Not']
+    basliklar: ['FaturaNo', 'Tarih', 'Tedarikçi', 'Tutar', 'Vade', 'Durum', 'Not']
   },
   {
     ad: 'Odemeler',
-    basliklar: ['Tarih', 'Tedarikçi', 'Tutar', 'Yöntem', 'Not']
+    basliklar: ['Tarih', 'Tedarikçi', 'Tutar', 'Yöntem', 'FaturaNo', 'Not']
   },
   {
     ad: 'Kullanicilar',

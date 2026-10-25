@@ -5,20 +5,35 @@
     var roleEl = document.getElementById('role');
     var emailEl = document.getElementById('email');
     var sheetEl = document.getElementById('sheet');
+    var yazmaEl = document.getElementById('yazma');
+    var tabs = document.querySelectorAll('.tab');
+    var panels = {
+      ozet: document.getElementById('panel-ozet'),
+      gelir: document.getElementById('panel-gelir'),
+      gider: document.getElementById('panel-gider'),
+      tedarikci: document.getElementById('panel-tedarikci')
+    };
+
+    function hasGas() {
+      return typeof google !== 'undefined' && google.script && google.script.run;
+    }
 
     function rolMetni(rol) {
       if (rol === 'patron') return 'Patron';
       if (rol === 'personel') return 'Personel';
-      return 'Misafir (iskelet)';
+      return 'Misafir';
     }
 
-    function goster(bilgi) {
+    function gosterOzet(bilgi) {
       statusEl.textContent = bilgi.message || 'Merhaba Aqua Tekel';
       roleEl.textContent = rolMetni(bilgi.role);
       emailEl.textContent = bilgi.userEmail || '—';
-      sheetEl.textContent = bilgi.spreadsheetConfigured
-        ? 'Tanımlı (test)'
-        : 'Henüz yok (YOUR_SPREADSHEET_ID)';
+      sheetEl.textContent = bilgi.usesActiveSpreadsheet
+        ? 'Aktif test tablosu (ID zorunlu değil)'
+        : bilgi.spreadsheetConfigured
+          ? 'Tanımlı (test)'
+          : 'Henüz yok (YOUR_SPREADSHEET_ID)';
+      yazmaEl.textContent = bilgi.canWrite ? 'Açık (patron/personel)' : 'Kapalı (misafir)';
       metaEl.hidden = false;
     }
 
@@ -26,20 +41,232 @@
       statusEl.textContent = mesaj || 'Panel bilgisi alınamadı.';
     }
 
-    if (typeof google !== 'undefined' && google.script && google.script.run) {
+    function switchTab(name) {
+      tabs.forEach(function (btn) {
+        var on = btn.getAttribute('data-tab') === name;
+        btn.classList.toggle('is-active', on);
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      Object.keys(panels).forEach(function (key) {
+        var el = panels[key];
+        if (!el) return;
+        if (key === name) {
+          el.hidden = false;
+          el.classList.add('is-active');
+        } else {
+          el.hidden = true;
+          el.classList.remove('is-active');
+        }
+      });
+      if (name === 'gelir') loadGelir();
+      if (name === 'gider') loadGider();
+      if (name === 'tedarikci') loadTedarikci();
+    }
+
+    tabs.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        switchTab(btn.getAttribute('data-tab'));
+      });
+    });
+
+    function setMsg(id, text, ok) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.hidden = !text;
+      el.textContent = text || '';
+      el.classList.toggle('is-ok', !!ok);
+      el.classList.toggle('is-err', !ok);
+    }
+
+    function formValues(form) {
+      var data = {};
+      Array.prototype.forEach.call(form.elements, function (el) {
+        if (!el.name) return;
+        data[el.name] = el.value;
+      });
+      return data;
+    }
+
+    function renderList(ulId, items, mapper) {
+      var ul = document.getElementById(ulId);
+      if (!ul) return;
+      ul.innerHTML = '';
+      if (!items || !items.length) {
+        var empty = document.createElement('li');
+        empty.className = 'muted';
+        empty.textContent = 'Kayıt yok veya sayfa kurulmadı.';
+        ul.appendChild(empty);
+        return;
+      }
+      items.forEach(function (item) {
+        var li = document.createElement('li');
+        li.innerHTML = mapper(item);
+        ul.appendChild(li);
+      });
+    }
+
+    function loadGelir() {
+      if (!hasGas()) {
+        renderList('list-gelir', [], null);
+        return;
+      }
       google.script.run
-        .withSuccessHandler(goster)
+        .withSuccessHandler(function (res) {
+          if (!res || !res.ok) {
+            setMsg('msg-gelir', (res && res.message) || 'Gelir okunamadı.', false);
+            renderList('list-gelir', [], null);
+            return;
+          }
+          setMsg('msg-gelir', '', true);
+          renderList('list-gelir', res.rows, function (r) {
+            return (
+              '<strong>' + (r.tutar != null ? r.tutar : '—') + '</strong> · ' +
+              (r.aciklama || '') +
+              '<div class="muted">' + (r.tarih || '') + ' · ' + (r.kategori || '') + '</div>'
+            );
+          });
+        })
+        .withFailureHandler(function () {
+          setMsg('msg-gelir', 'Gelir listesi alınamadı.', false);
+        })
+        .listIncome({});
+    }
+
+    function loadGider() {
+      if (!hasGas()) return;
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.ok) {
+            setMsg('msg-gider', (res && res.message) || 'Gider okunamadı.', false);
+            renderList('list-gider', [], null);
+            return;
+          }
+          setMsg('msg-gider', '', true);
+          renderList('list-gider', res.rows, function (r) {
+            return (
+              '<strong>' + (r.tutar != null ? r.tutar : '—') + '</strong> · ' +
+              (r.aciklama || '') +
+              '<div class="muted">' + (r.tarih || '') + ' · ' + (r.tedarikci || '') + '</div>'
+            );
+          });
+        })
+        .withFailureHandler(function () {
+          setMsg('msg-gider', 'Gider listesi alınamadı.', false);
+        })
+        .listExpense({});
+    }
+
+    function loadTedarikci() {
+      if (!hasGas()) return;
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.ok) {
+            setMsg('msg-tedarikci', (res && res.message) || 'Tedarikçi okunamadı.', false);
+            renderList('list-tedarikci', [], null);
+            return;
+          }
+          setMsg('msg-tedarikci', '', true);
+          renderList('list-tedarikci', res.rows, function (r) {
+            return (
+              '<strong>' + (r.ad || '') + '</strong>' +
+              '<div class="muted">Kalan borç: ' + (r.kalanBorc != null ? r.kalanBorc : '—') +
+              ' · ' + (r.telefon || '') + '</div>'
+            );
+          });
+        })
+        .withFailureHandler(function () {
+          setMsg('msg-tedarikci', 'Tedarikçi listesi alınamadı.', false);
+        })
+        .listSuppliers();
+    }
+
+    var formGelir = document.getElementById('form-gelir');
+    if (formGelir) {
+      formGelir.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!hasGas()) {
+          setMsg('msg-gelir', 'Yalnızca Apps Script Web App içinde çalışır.', false);
+          return;
+        }
+        var kayit = formValues(formGelir);
+        google.script.run
+          .withSuccessHandler(function (res) {
+            setMsg('msg-gelir', res.message || '', !!res.ok);
+            if (res.ok) {
+              formGelir.reset();
+              loadGelir();
+            }
+          })
+          .withFailureHandler(function () {
+            setMsg('msg-gelir', 'Kayıt eklenemedi.', false);
+          })
+          .addIncome(kayit);
+      });
+    }
+
+    var formGider = document.getElementById('form-gider');
+    if (formGider) {
+      formGider.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!hasGas()) {
+          setMsg('msg-gider', 'Yalnızca Apps Script Web App içinde çalışır.', false);
+          return;
+        }
+        var kayit = formValues(formGider);
+        google.script.run
+          .withSuccessHandler(function (res) {
+            setMsg('msg-gider', res.message || '', !!res.ok);
+            if (res.ok) {
+              formGider.reset();
+              loadGider();
+            }
+          })
+          .withFailureHandler(function () {
+            setMsg('msg-gider', 'Kayıt eklenemedi.', false);
+          })
+          .addExpense(kayit);
+      });
+    }
+
+    var formTed = document.getElementById('form-tedarikci');
+    if (formTed) {
+      formTed.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!hasGas()) {
+          setMsg('msg-tedarikci', 'Yalnızca Apps Script Web App içinde çalışır.', false);
+          return;
+        }
+        var kayit = formValues(formTed);
+        google.script.run
+          .withSuccessHandler(function (res) {
+            setMsg('msg-tedarikci', res.message || '', !!res.ok);
+            if (res.ok) {
+              formTed.reset();
+              loadTedarikci();
+            }
+          })
+          .withFailureHandler(function () {
+            setMsg('msg-tedarikci', 'Kayıt eklenemedi.', false);
+          })
+          .addSupplier(kayit);
+      });
+    }
+
+    if (hasGas()) {
+      google.script.run
+        .withSuccessHandler(gosterOzet)
         .withFailureHandler(function () {
           hata('Bağlantı hatası. Sayfayı yenileyin.');
         })
         .getPanelData();
     } else {
-      // Yerel önizleme / şablon dışı
-      goster({
+      gosterOzet({
         message: 'Merhaba Aqua Tekel',
         role: 'misafir',
         userEmail: '',
-        spreadsheetConfigured: false
+        spreadsheetConfigured: false,
+        usesActiveSpreadsheet: true,
+        canWrite: false
       });
     }
   })();

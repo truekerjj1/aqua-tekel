@@ -16,23 +16,77 @@
         <p class="sub">Bu panel test içindir. Canlı muhasebe dosyasına bağlı değildir.</p>
       </header>
 
-      <main class="panel" id="panel">
-        <p class="status" id="status">Yükleniyor…</p>
-        <dl class="meta" id="meta" hidden>
-          <div>
-            <dt>Rol</dt>
-            <dd id="role">—</dd>
-          </div>
-          <div>
-            <dt>Kullanıcı</dt>
-            <dd id="email">—</dd>
-          </div>
-          <div>
-            <dt>Tablo ayarı</dt>
-            <dd id="sheet">—</dd>
-          </div>
-        </dl>
-        <p class="hint">Gelir, gider ve tedarikçi işlemleri sonraki adımlarda eklenecek.</p>
+      <nav class="tabs" role="tablist" aria-label="Panel sekmeleri">
+        <button type="button" class="tab is-active" data-tab="ozet" role="tab" aria-selected="true">Özet</button>
+        <button type="button" class="tab" data-tab="gelir" role="tab" aria-selected="false">Gelir</button>
+        <button type="button" class="tab" data-tab="gider" role="tab" aria-selected="false">Gider</button>
+        <button type="button" class="tab" data-tab="tedarikci" role="tab" aria-selected="false">Tedarikçi</button>
+      </nav>
+
+      <main class="panel">
+        <section class="tab-panel is-active" id="panel-ozet" role="tabpanel">
+          <p class="status" id="status">Yükleniyor…</p>
+          <dl class="meta" id="meta" hidden>
+            <div>
+              <dt>Rol</dt>
+              <dd id="role">—</dd>
+            </div>
+            <div>
+              <dt>Kullanıcı</dt>
+              <dd id="email">—</dd>
+            </div>
+            <div>
+              <dt>Tablo</dt>
+              <dd id="sheet">—</dd>
+            </div>
+            <div>
+              <dt>Yazma</dt>
+              <dd id="yazma">—</dd>
+            </div>
+          </dl>
+          <p class="hint">Sandbox özeti. Veri, bağlı test tablosundan okunur (YOUR_SPREADSHEET_ID gerekmez).</p>
+        </section>
+
+        <section class="tab-panel" id="panel-gelir" role="tabpanel" hidden>
+          <h2 class="section-title">Gelir</h2>
+          <p class="hint">Test kaydı eklemek için tarih, tutar ve açıklama girin.</p>
+          <form class="form" id="form-gelir">
+            <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
+            <label>Tutar <input name="tutar" type="text" inputmode="decimal" placeholder="100" required /></label>
+            <label>Açıklama <input name="aciklama" type="text" required /></label>
+            <label>Kategori <input name="kategori" type="text" placeholder="Satış" /></label>
+            <button type="submit" class="btn">Gelir ekle</button>
+          </form>
+          <p class="form-msg" id="msg-gelir" hidden></p>
+          <ul class="list" id="list-gelir"></ul>
+        </section>
+
+        <section class="tab-panel" id="panel-gider" role="tabpanel" hidden>
+          <h2 class="section-title">Gider</h2>
+          <p class="hint">Test gideri; tedarikçi adı Tedarikçiler sayfası ile aynı yazılmalı.</p>
+          <form class="form" id="form-gider">
+            <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
+            <label>Tutar <input name="tutar" type="text" inputmode="decimal" placeholder="50" required /></label>
+            <label>Açıklama <input name="aciklama" type="text" required /></label>
+            <label>Tedarikçi <input name="tedarikci" type="text" /></label>
+            <button type="submit" class="btn">Gider ekle</button>
+          </form>
+          <p class="form-msg" id="msg-gider" hidden></p>
+          <ul class="list" id="list-gider"></ul>
+        </section>
+
+        <section class="tab-panel" id="panel-tedarikci" role="tabpanel" hidden>
+          <h2 class="section-title">Tedarikçi</h2>
+          <p class="hint">Kalan borç = Faturalar − Ödemeler (hesaplanır).</p>
+          <form class="form" id="form-tedarikci">
+            <label>Ad <input name="ad" type="text" required /></label>
+            <label>Telefon <input name="telefon" type="text" /></label>
+            <label>Not <input name="not" type="text" /></label>
+            <button type="submit" class="btn">Tedarikçi ekle</button>
+          </form>
+          <p class="form-msg" id="msg-tedarikci" hidden></p>
+          <ul class="list" id="list-tedarikci"></ul>
+        </section>
       </main>
     </div>
     <?!= include('ui/Client'); ?>

@@ -1,37 +1,130 @@
 /**
- * Aqua Tekel — çift kayıt önleme (iskelet / stub)
+ * Aqua Tekel — çift kayıt kontrolü (sandbox)
  *
- * TODO: Aynı işlemin iki kez yazılmasını engelleyecek kurallar.
+ * Gelir/Gider: Tarih + Tutar + Açıklama
+ * Fatura: FaturaNo + Tedarikçi
  */
 
 /**
- * Kayıt daha önce eklenmiş mi? (stub)
+ * Gelir/gider çift anahtarı.
  * @param {Object} kayit
- * @param {string} tur — 'gelir' | 'gider'
+ * @return {string}
+ */
+function buildTxDedupKey(kayit) {
+  kayit = kayit || {};
+  var tarih = normalizeKeyPart(kayit.tarih);
+  var tutar = normalizeKeyPart(parseTutar(kayit.tutar));
+  var aciklama = normalizeKeyPart(kayit.aciklama);
+  return tarih + '|' + tutar + '|' + aciklama;
+}
+
+/**
+ * Fatura çift anahtarı.
+ * @param {Object} kayit
+ * @return {string}
+ */
+function buildInvoiceDedupKey(kayit) {
+  kayit = kayit || {};
+  return normalizeKeyPart(kayit.faturaNo) + '|' + normalizeKeyPart(kayit.tedarikci);
+}
+
+/**
+ * Satırdan gelir/gider anahtarı (sütun: Tarih, Tutar, Açıklama = 0,1,2).
+ * @param {Array<*>} row
+ * @return {string}
+ */
+function rowTxDedupKey(row) {
+  return buildTxDedupKey({
+    tarih: row[0],
+    tutar: row[1],
+    aciklama: row[2]
+  });
+}
+
+/**
+ * Satırdan fatura anahtarı (FaturaNo=0, Tedarikçi=2).
+ * @param {Array<*>} row
+ * @return {string}
+ */
+function rowInvoiceDedupKey(row) {
+  return buildInvoiceDedupKey({
+    faturaNo: row[0],
+    tedarikci: row[2]
+  });
+}
+
+/**
+ * Kayıt daha önce eklenmiş mi?
+ * @param {Object} kayit
+ * @param {string} tur — 'gelir' | 'gider' | 'fatura'
  * @return {boolean} true = çift kayıt şüphesi
  */
 function isDuplicate(kayit, tur) {
-  // TODO: Tarih + tutar + açıklama (veya hash) ile kontrol
+  tur = String(tur || '').toLowerCase();
+  var cfg = getConfig();
+  var sheetName;
+  var keyFn;
+  var rowKeyFn;
+
+  if (tur === 'gelir') {
+    sheetName = cfg.SHEETS.GELIR;
+    keyFn = buildTxDedupKey;
+    rowKeyFn = rowTxDedupKey;
+  } else if (tur === 'gider') {
+    sheetName = cfg.SHEETS.GIDER;
+    keyFn = buildTxDedupKey;
+    rowKeyFn = rowTxDedupKey;
+  } else if (tur === 'fatura') {
+    sheetName = cfg.SHEETS.FATURALAR;
+    keyFn = buildInvoiceDedupKey;
+    rowKeyFn = rowInvoiceDedupKey;
+  } else {
+    return false;
+  }
+
+  var target = keyFn(kayit);
+  if (!target || target === '||' || target === '|') {
+    return false;
+  }
+
+  var got = getSandboxSheet(sheetName);
+  if (!got.ok) {
+    return false;
+  }
+
+  var rows = getDataRows(got.sheet);
+  for (var i = 0; i < rows.length; i++) {
+    if (rowKeyFn(rows[i]) === target) {
+      return true;
+    }
+  }
   return false;
 }
 
 /**
- * Çift kayıt varsa uyarı / engelleme (stub).
+ * Çift kayıt varsa engelleme sonucu.
  * @param {Object} kayit
  * @param {string} tur
  * @return {{ok: boolean, message: string, duplicate: boolean}}
  */
 function checkDedup(kayit, tur) {
   if (isDuplicate(kayit, tur)) {
+    var tip = String(tur || '').toLowerCase();
+    var msg;
+    if (tip === 'fatura') {
+      msg = 'Bu fatura daha önce eklenmiş olabilir (FaturaNo + Tedarikçi).';
+    } else {
+      msg = 'Bu kayıt daha önce eklenmiş olabilir (Tarih + Tutar + Açıklama).';
+    }
     return {
       ok: false,
       duplicate: true,
-      message: 'Bu kayıt daha önce eklenmiş olabilir (çift kayıt kontrolü — stub).'
+      message: msg
     };
   }
   return {
     ok: true,
     duplicate: false,
-    message: 'Çift kayıt bulunamadı (iskelet).'
+    message: 'Çift kayıt bulunamadı.'
   };
 }

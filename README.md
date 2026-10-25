@@ -4,7 +4,7 @@
 Canlı muhasebe dosyasına **bağlanmayın**.
 
 Test tablosu: **Aqua TEKEL TEST PROJESİ**  
-(Bu iskelette tablo ID’si yoktur.)
+(Bu iskelette tablo ID’si yoktur. CRUD `getActiveSpreadsheet` kullanır; `YOUR_SPREADSHEET_ID` zorunlu değil.)
 
 Depo: [https://github.com/truekerjj1/aqua-tekel](https://github.com/truekerjj1/aqua-tekel)
 
@@ -16,9 +16,15 @@ Adım adım kopyala-yapıştır rehberi:
 
 **→ [PANEL-KURULUM.md](./PANEL-KURULUM.md)**
 
-Orada: Sheet → Uzantılar → Apps Script, her dosyanın nereye yapıştırılacağı, Web App (Only myself), beklenen ekran (**Merhaba Aqua Tekel** + **Test ortamı**).
+Orada: Sheet → Uzantılar → Apps Script, her dosyanın nereye yapıştırılacağı, Web App (Only myself), beklenen ekran (**Merhaba Aqua Tekel** + **Test ortamı** + sekmeler).
 
 Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / panel talimatı.
+
+---
+
+## PC kapalıyken / eve dönüş
+
+Kısa özet: [docs/PC-KAPALI-ILERLEME.md](./docs/PC-KAPALI-ILERLEME.md)
 
 ---
 
@@ -26,11 +32,14 @@ Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / panel talimat
 
 | Bölüm | Açıklama |
 |--------|----------|
+| `sheets/SEMASI.md` | Gelir–Gider–Tedarikçi–Fatura–Ödeme–Kullanıcı sütunları; kalan borç; çift kayıt |
 | `src/Main.gs` | Web App + tablo menüsü |
 | `src/Bootstrap.gs` | Test sayfalarını oluşturur (aktif tablo; ID yok) |
-| `src/Config.gs` | Ayarlar (yer tutucu ID) |
-| `src/Auth.gs` … | Yetki / gelir / gider iskeleti (şimdilik stub) |
-| `ui/` | Mobil panel HTML |
+| `src/Config.gs` | Sayfa adları, başlıklar, yetki e-posta listeleri (placeholder) |
+| `src/Auth.gs` | Patron / personel / misafir |
+| `src/Income.gs` / `Expense.gs` / `Suppliers.gs` | Sandbox CRUD (aktif tablo) |
+| `src/Dedup.gs` | Çift kayıt kontrolü |
+| `ui/` | Mobil panel: Özet / Gelir / Gider / Tedarikçi |
 
 ---
 
@@ -39,6 +48,7 @@ Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / panel talimat
 - Canlı Spreadsheet / Script ID yazmayın.
 - Web App: **Only myself**.
 - `.clasp.json` paylaşmayın (yalnızca `.clasp.json.example` vardır).
+- Config’deki `patron@example.com` / `personel@example.com` örnektir; gerçek hesap değildir.
 
 ---
 
@@ -51,6 +61,10 @@ aqua-tekel/
 ├── appsscript.json
 ├── .clasp.json.example
 ├── .gitignore
+├── docs/
+│   └── PC-KAPALI-ILERLEME.md
+├── sheets/
+│   └── SEMASI.md
 ├── src/
 │   ├── Main.gs
 │   ├── Bootstrap.gs
