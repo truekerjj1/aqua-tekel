@@ -1,0 +1,8 @@
+{
+  "name": "aqua-tekel",
+  "private": true,
+  "description": "Aqua Tekel sandbox — local pure-JS tests only (no GAS deploy)",
+  "scripts": {
+    "test": "node tests/dedup-keys.test.js"
+  }
+}

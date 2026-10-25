@@ -17,35 +17,41 @@ function addIncome(kayit) {
   }
 
   kayit = kayit || {};
-  var tutar = parseTutar(kayit.tutar);
-  if (!kayit.tarih || !kayit.aciklama || isNaN(tutar)) {
+  if (!kayit.tarih || !kayit.aciklama) {
     return {
       ok: false,
       message: 'Gelir için tarih, tutar ve açıklama gerekli.'
     };
   }
-
-  var dedup = checkDedup(kayit, 'gelir');
-  if (!dedup.ok) {
-    return dedup;
+  var tutarCheck = requirePositiveTutar(kayit.tutar);
+  if (!tutarCheck.ok) {
+    return { ok: false, message: tutarCheck.message };
   }
+  var tutar = tutarCheck.tutar;
 
-  var cfg = getConfig();
-  var got = getSandboxSheet(cfg.SHEETS.GELIR);
-  if (!got.ok) {
-    return { ok: false, message: got.message };
-  }
+  return withDocumentLock(function () {
+    var dedup = checkDedup(kayit, 'gelir');
+    if (!dedup.ok) {
+      return dedup;
+    }
 
-  got.sheet.appendRow([
-    kayit.tarih,
-    tutar,
-    String(kayit.aciklama),
-    kayit.kategori || '',
-    kayit.kaynak || '',
-    kayit.not || ''
-  ]);
+    var cfg = getConfig();
+    var got = getSandboxSheet(cfg.SHEETS.GELIR);
+    if (!got.ok) {
+      return { ok: false, message: got.message };
+    }
 
-  return { ok: true, message: 'Gelir kaydı eklendi.' };
+    got.sheet.appendRow([
+      kayit.tarih,
+      tutar,
+      String(kayit.aciklama),
+      kayit.kategori || '',
+      kayit.kaynak || '',
+      kayit.not || ''
+    ]);
+
+    return { ok: true, message: 'Gelir kaydı eklendi.' };
+  });
 }
 
 /**
@@ -100,31 +106,43 @@ function updateIncome(id, kayit) {
     return { ok: false, message: 'Geçersiz satır numarası.' };
   }
 
-  var cfg = getConfig();
-  var got = getSandboxSheet(cfg.SHEETS.GELIR);
-  if (!got.ok) {
-    return { ok: false, message: got.message };
-  }
+  return withDocumentLock(function () {
+    var cfg = getConfig();
+    var got = getSandboxSheet(cfg.SHEETS.GELIR);
+    if (!got.ok) {
+      return { ok: false, message: got.message };
+    }
 
-  if (rowNum > got.sheet.getLastRow()) {
-    return { ok: false, message: 'Gelir satırı bulunamadı.' };
-  }
+    if (rowNum > got.sheet.getLastRow()) {
+      return { ok: false, message: 'Gelir satırı bulunamadı.' };
+    }
 
-  var existing = got.sheet.getRange(rowNum, 1, rowNum, 6).getValues()[0];
-  var tarih = kayit.tarih !== undefined ? kayit.tarih : existing[0];
-  var tutar = kayit.tutar !== undefined ? parseTutar(kayit.tutar) : existing[1];
-  var aciklama = kayit.aciklama !== undefined ? kayit.aciklama : existing[2];
-  var kategori = kayit.kategori !== undefined ? kayit.kategori : existing[3];
-  var kaynak = kayit.kaynak !== undefined ? kayit.kaynak : existing[4];
-  var not = kayit.not !== undefined ? kayit.not : existing[5];
+    var existing = got.sheet.getRange(rowNum, 1, rowNum, 6).getValues()[0];
+    var tarih = kayit.tarih !== undefined ? kayit.tarih : existing[0];
+    var tutarRaw = kayit.tutar !== undefined ? kayit.tutar : existing[1];
+    var aciklama = kayit.aciklama !== undefined ? kayit.aciklama : existing[2];
+    var kategori = kayit.kategori !== undefined ? kayit.kategori : existing[3];
+    var kaynak = kayit.kaynak !== undefined ? kayit.kaynak : existing[4];
+    var not = kayit.not !== undefined ? kayit.not : existing[5];
 
-  if (isNaN(parseTutar(tutar))) {
-    return { ok: false, message: 'Geçersiz tutar.' };
-  }
+    var tutarCheck = requirePositiveTutar(tutarRaw);
+    if (!tutarCheck.ok) {
+      return { ok: false, message: tutarCheck.message };
+    }
 
-  got.sheet.getRange(rowNum, 1, rowNum, 6).setValues([[
-    tarih, parseTutar(tutar), aciklama, kategori, kaynak, not
-  ]]);
+    var dedup = checkDedup({
+      tarih: tarih,
+      tutar: tutarCheck.tutar,
+      aciklama: aciklama
+    }, 'gelir', rowNum);
+    if (!dedup.ok) {
+      return dedup;
+    }
 
-  return { ok: true, message: 'Gelir kaydı güncellendi.' };
+    got.sheet.getRange(rowNum, 1, rowNum, 6).setValues([[
+      tarih, tutarCheck.tutar, aciklama, kategori, kaynak, not
+    ]]);
+
+    return { ok: true, message: 'Gelir kaydı güncellendi.' };
+  });
 }

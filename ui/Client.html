@@ -23,6 +23,16 @@
       return typeof google !== 'undefined' && google.script && google.script.run;
     }
 
+    function escapeHtml(deger) {
+      if (deger === null || deger === undefined) return '';
+      return String(deger)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     function rolMetni(rol) {
       if (rol === 'patron') return 'Patron';
       if (rol === 'personel') return 'Personel';
@@ -57,9 +67,9 @@
       listBorcOzet.hidden = false;
       renderList('list-borc-ozet', items, function (r) {
         return (
-          '<strong>' + (r.ad || '') + '</strong>' +
+          '<strong>' + escapeHtml(r.ad || '') + '</strong>' +
           '<div class="muted">Kalan borç: <strong>' +
-          formatTutar(r.kalanBorc) +
+          escapeHtml(formatTutar(r.kalanBorc)) +
           '</strong></div>'
         );
       });
@@ -173,9 +183,10 @@
           setMsg('msg-gelir', '', true);
           renderList('list-gelir', res.rows, function (r) {
             return (
-              '<strong>' + (r.tutar != null ? r.tutar : '—') + '</strong> · ' +
-              (r.aciklama || '') +
-              '<div class="muted">' + (r.tarih || '') + ' · ' + (r.kategori || '') + '</div>'
+              '<strong>' + escapeHtml(r.tutar != null ? r.tutar : '—') + '</strong> · ' +
+              escapeHtml(r.aciklama || '') +
+              '<div class="muted">' + escapeHtml(r.tarih || '') + ' · ' +
+              escapeHtml(r.kategori || '') + '</div>'
             );
           });
         })
@@ -197,9 +208,10 @@
           setMsg('msg-gider', '', true);
           renderList('list-gider', res.rows, function (r) {
             return (
-              '<strong>' + (r.tutar != null ? r.tutar : '—') + '</strong> · ' +
-              (r.aciklama || '') +
-              '<div class="muted">' + (r.tarih || '') + ' · ' + (r.tedarikci || '') + '</div>'
+              '<strong>' + escapeHtml(r.tutar != null ? r.tutar : '—') + '</strong> · ' +
+              escapeHtml(r.aciklama || '') +
+              '<div class="muted">' + escapeHtml(r.tarih || '') + ' · ' +
+              escapeHtml(r.tedarikci || '') + '</div>'
             );
           });
         })
@@ -222,9 +234,9 @@
           renderList('list-tedarikci', res.rows, function (r) {
             var borc = r.kalanBorc != null ? r.kalanBorc : '—';
             return (
-              '<strong>' + (r.ad || '') + '</strong>' +
-              '<div class="muted">Kalan borç: <strong>' + borc + '</strong>' +
-              (r.telefon ? ' · ' + r.telefon : '') + '</div>'
+              '<strong>' + escapeHtml(r.ad || '') + '</strong>' +
+              '<div class="muted">Kalan borç: <strong>' + escapeHtml(borc) + '</strong>' +
+              (r.telefon ? ' · ' + escapeHtml(r.telefon) : '') + '</div>'
             );
           });
         })

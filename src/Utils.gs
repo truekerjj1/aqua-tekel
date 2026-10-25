@@ -60,6 +60,50 @@ function parseTutar(deger) {
 }
 
 /**
+ * Tutarı doğrular: sayı ve > 0 olmalı.
+ * @param {*} deger
+ * @return {{ok: boolean, message: string, tutar: number}}
+ */
+function requirePositiveTutar(deger) {
+  var tutar = parseTutar(deger);
+  if (isNaN(tutar) || tutar <= 0) {
+    return {
+      ok: false,
+      message: 'Tutar sıfırdan büyük bir sayı olmalı.',
+      tutar: NaN
+    };
+  }
+  return { ok: true, message: 'Tamam', tutar: tutar };
+}
+
+/**
+ * Belge kilidi ile yazma (check + append yarışını azaltır).
+ * Kilit alınamazsa Türkçe hata nesnesi döner.
+ * @param {function(): *} fn
+ * @return {*}
+ */
+function withDocumentLock(fn) {
+  var lock = LockService.getDocumentLock();
+  try {
+    lock.waitLock(30000);
+  } catch (e) {
+    return {
+      ok: false,
+      message: 'Tablo meşgul; lütfen birkaç saniye sonra tekrar deneyin.'
+    };
+  }
+  try {
+    return fn();
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (e2) {
+      // kilit zaten bırakılmış olabilir
+    }
+  }
+}
+
+/**
  * Aktif (bağlı) test tablosunu alır. Canlı ID kullanmaz.
  * @return {Spreadsheet|null}
  */

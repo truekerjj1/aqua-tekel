@@ -139,12 +139,15 @@ function getPanelSummary() {
     messages.push(suppliers.message);
   }
 
-  var ok = !!(income && income.ok) || !!(expense && expense.ok) ||
+  // Özet ancak üç kaynak da başarıyla okunursa tamam sayılır
+  // (kısmi başarıda eksik toplamların “ok” görünmesini engeller).
+  var ok = !!(income && income.ok) &&
+    !!(expense && expense.ok) &&
     !!(suppliers && suppliers.ok);
 
   return {
-    ok: ok || messages.length === 0,
-    message: messages.length ? messages[0] : 'Tamam',
+    ok: ok,
+    message: messages.length ? messages[0] : (ok ? 'Tamam' : 'Özet eksik'),
     gelirToplam: gelirToplam,
     giderToplam: giderToplam,
     tedarikciBorcToplam: tedarikciBorcToplam,

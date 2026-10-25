@@ -8,7 +8,7 @@
 /**
  * Yeni ödeme kaydı ekler.
  * @param {Object} kayit — {tarih, tedarikci, tutar, yontem, faturaNo, not}
- * @return {{ok: boolean, message: string}}
+ * @return {{ok: boolean, message: string, duplicate?: boolean}}
  */
 function addPayment(kayit) {
   var denied = denyUnlessWriter();
@@ -18,33 +18,60 @@ function addPayment(kayit) {
 
   kayit = kayit || {};
   var tedarikci = String(kayit.tedarikci || '').trim();
-  var tutar = parseTutar(kayit.tutar);
 
-  if (!kayit.tarih || !tedarikci || isNaN(tutar)) {
+  if (!kayit.tarih || !tedarikci) {
     return {
       ok: false,
       message: 'Ödeme için tarih, tedarikçi ve tutar gerekli.'
     };
   }
 
-  var cfg = getConfig();
-  var got = getSandboxSheet(cfg.SHEETS.ODEMELER);
-  if (!got.ok) {
-    return { ok: false, message: got.message };
+  var tutarCheck = requirePositiveTutar(kayit.tutar);
+  if (!tutarCheck.ok) {
+    return { ok: false, message: tutarCheck.message };
+  }
+  var tutar = tutarCheck.tutar;
+
+  var supplierErr = requireExistingSupplier(tedarikci);
+  if (supplierErr) {
+    return supplierErr;
   }
 
-  got.sheet.appendRow([
-    kayit.tarih,
-    tedarikci,
-    tutar,
-    kayit.yontem || '',
-    kayit.faturaNo || '',
-    kayit.not || ''
-  ]);
+  return withDocumentLock(function () {
+    var supplierErrLocked = requireExistingSupplier(tedarikci);
+    if (supplierErrLocked) {
+      return supplierErrLocked;
+    }
 
-  refreshSupplierBalances(tedarikci);
+    var dedup = checkDedup({
+      tarih: kayit.tarih,
+      tedarikci: tedarikci,
+      tutar: tutar,
+      faturaNo: kayit.faturaNo || ''
+    }, 'odeme');
+    if (!dedup.ok) {
+      return dedup;
+    }
 
-  return { ok: true, message: 'Ödeme kaydı eklendi.' };
+    var cfg = getConfig();
+    var got = getSandboxSheet(cfg.SHEETS.ODEMELER);
+    if (!got.ok) {
+      return { ok: false, message: got.message };
+    }
+
+    got.sheet.appendRow([
+      kayit.tarih,
+      tedarikci,
+      tutar,
+      kayit.yontem || '',
+      kayit.faturaNo || '',
+      kayit.not || ''
+    ]);
+
+    refreshSupplierBalances(tedarikci);
+
+    return { ok: true, message: 'Ödeme kaydı eklendi.' };
+  });
 }
 
 /**
@@ -104,41 +131,60 @@ function updatePayment(id, kayit) {
     return { ok: false, message: 'Geçersiz satır numarası.' };
   }
 
-  var cfg = getConfig();
-  var got = getSandboxSheet(cfg.SHEETS.ODEMELER);
-  if (!got.ok) {
-    return { ok: false, message: got.message };
-  }
+  return withDocumentLock(function () {
+    var cfg = getConfig();
+    var got = getSandboxSheet(cfg.SHEETS.ODEMELER);
+    if (!got.ok) {
+      return { ok: false, message: got.message };
+    }
 
-  if (rowNum > got.sheet.getLastRow()) {
-    return { ok: false, message: 'Ödeme satırı bulunamadı.' };
-  }
+    if (rowNum > got.sheet.getLastRow()) {
+      return { ok: false, message: 'Ödeme satırı bulunamadı.' };
+    }
 
-  var existing = got.sheet.getRange(rowNum, 1, rowNum, 6).getValues()[0];
-  var tarih = kayit.tarih !== undefined ? kayit.tarih : existing[0];
-  var tedarikci = kayit.tedarikci !== undefined
-    ? String(kayit.tedarikci).trim()
-    : existing[1];
-  var tutar = kayit.tutar !== undefined ? parseTutar(kayit.tutar) : existing[2];
-  var yontem = kayit.yontem !== undefined ? kayit.yontem : existing[3];
-  var faturaNo = kayit.faturaNo !== undefined ? kayit.faturaNo : existing[4];
-  var not = kayit.not !== undefined ? kayit.not : existing[5];
+    var existing = got.sheet.getRange(rowNum, 1, rowNum, 6).getValues()[0];
+    var tarih = kayit.tarih !== undefined ? kayit.tarih : existing[0];
+    var tedarikci = kayit.tedarikci !== undefined
+      ? String(kayit.tedarikci).trim()
+      : existing[1];
+    var tutarRaw = kayit.tutar !== undefined ? kayit.tutar : existing[2];
+    var yontem = kayit.yontem !== undefined ? kayit.yontem : existing[3];
+    var faturaNo = kayit.faturaNo !== undefined ? kayit.faturaNo : existing[4];
+    var not = kayit.not !== undefined ? kayit.not : existing[5];
 
-  if (!tedarikci) {
-    return { ok: false, message: 'Tedarikçi boş olamaz.' };
-  }
-  if (isNaN(parseTutar(tutar))) {
-    return { ok: false, message: 'Geçersiz tutar.' };
-  }
+    if (!tedarikci) {
+      return { ok: false, message: 'Tedarikçi boş olamaz.' };
+    }
 
-  got.sheet.getRange(rowNum, 1, rowNum, 6).setValues([[
-    tarih, tedarikci, parseTutar(tutar), yontem, faturaNo, not
-  ]]);
+    var tutarCheck = requirePositiveTutar(tutarRaw);
+    if (!tutarCheck.ok) {
+      return { ok: false, message: tutarCheck.message };
+    }
 
-  refreshSupplierBalances(tedarikci);
-  if (normalizeKeyPart(existing[1]) !== normalizeKeyPart(tedarikci)) {
-    refreshSupplierBalances(existing[1]);
-  }
+    var supplierErr = requireExistingSupplier(tedarikci);
+    if (supplierErr) {
+      return supplierErr;
+    }
 
-  return { ok: true, message: 'Ödeme kaydı güncellendi.' };
+    var dedup = checkDedup({
+      tarih: tarih,
+      tedarikci: tedarikci,
+      tutar: tutarCheck.tutar,
+      faturaNo: faturaNo || ''
+    }, 'odeme', rowNum);
+    if (!dedup.ok) {
+      return dedup;
+    }
+
+    got.sheet.getRange(rowNum, 1, rowNum, 6).setValues([[
+      tarih, tedarikci, tutarCheck.tutar, yontem, faturaNo, not
+    ]]);
+
+    refreshSupplierBalances(tedarikci);
+    if (normalizeKeyPart(existing[1]) !== normalizeKeyPart(tedarikci)) {
+      refreshSupplierBalances(existing[1]);
+    }
+
+    return { ok: true, message: 'Ödeme kaydı güncellendi.' };
+  });
 }
