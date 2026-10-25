@@ -167,10 +167,11 @@
           }
           setMsg('msg-tedarikci', '', true);
           renderList('list-tedarikci', res.rows, function (r) {
+            var borc = r.kalanBorc != null ? r.kalanBorc : '—';
             return (
               '<strong>' + (r.ad || '') + '</strong>' +
-              '<div class="muted">Kalan borç: ' + (r.kalanBorc != null ? r.kalanBorc : '—') +
-              ' · ' + (r.telefon || '') + '</div>'
+              '<div class="muted">Kalan borç: <strong>' + borc + '</strong>' +
+              (r.telefon ? ' · ' + r.telefon : '') + '</div>'
             );
           });
         })
@@ -249,6 +250,54 @@
             setMsg('msg-tedarikci', 'Kayıt eklenemedi.', false);
           })
           .addSupplier(kayit);
+      });
+    }
+
+    var formFatura = document.getElementById('form-fatura');
+    if (formFatura) {
+      formFatura.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!hasGas()) {
+          setMsg('msg-fatura', 'Yalnızca Apps Script Web App içinde çalışır.', false);
+          return;
+        }
+        var kayit = formValues(formFatura);
+        google.script.run
+          .withSuccessHandler(function (res) {
+            setMsg('msg-fatura', res.message || '', !!res.ok);
+            if (res.ok) {
+              formFatura.reset();
+              loadTedarikci();
+            }
+          })
+          .withFailureHandler(function () {
+            setMsg('msg-fatura', 'Fatura eklenemedi.', false);
+          })
+          .addInvoice(kayit);
+      });
+    }
+
+    var formOdeme = document.getElementById('form-odeme');
+    if (formOdeme) {
+      formOdeme.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!hasGas()) {
+          setMsg('msg-odeme', 'Yalnızca Apps Script Web App içinde çalışır.', false);
+          return;
+        }
+        var kayit = formValues(formOdeme);
+        google.script.run
+          .withSuccessHandler(function (res) {
+            setMsg('msg-odeme', res.message || '', !!res.ok);
+            if (res.ok) {
+              formOdeme.reset();
+              loadTedarikci();
+            }
+          })
+          .withFailureHandler(function () {
+            setMsg('msg-odeme', 'Ödeme eklenemedi.', false);
+          })
+          .addPayment(kayit);
       });
     }
 

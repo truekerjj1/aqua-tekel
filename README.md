@@ -38,8 +38,9 @@ Kısa özet: [docs/PC-KAPALI-ILERLEME.md](./docs/PC-KAPALI-ILERLEME.md)
 | `src/Config.gs` | Sayfa adları, başlıklar, yetki e-posta listeleri (placeholder) |
 | `src/Auth.gs` | Patron / personel / misafir |
 | `src/Income.gs` / `Expense.gs` / `Suppliers.gs` | Sandbox CRUD (aktif tablo) |
+| `src/Invoices.gs` / `Payments.gs` | Fatura / ödeme CRUD; kalan borç güncellemesi |
 | `src/Dedup.gs` | Çift kayıt kontrolü |
-| `ui/` | Mobil panel: Özet / Gelir / Gider / Tedarikçi |
+| `ui/` | Mobil panel: Özet / Gelir / Gider / Tedarikçi (+ fatura/ödeme formları) |
 
 ---
 
@@ -73,6 +74,8 @@ aqua-tekel/
 │   ├── Income.gs
 │   ├── Expense.gs
 │   ├── Suppliers.gs
+│   ├── Invoices.gs
+│   ├── Payments.gs
 │   ├── Dedup.gs
 │   └── Utils.gs
 └── ui/

@@ -1,12 +1,12 @@
 /**
  * Aqua Tekel — tedarikçiler (sandbox CRUD)
  *
- * Aktif tabloya yazar. KalanBorc = Faturalar − Odemeler (aynı Ad).
+ * Aktif tabloya yazar. KalanBorc (Bakiye) = Faturalar − Odemeler (aynı Ad).
  * YOUR_SPREADSHEET_ID zorunlu değildir; canlı ID kullanılmaz.
  */
 
 /**
- * Tedarikçi için kalan borç hesaplar (Faturalar − Odemeler).
+ * Tedarikçi için kalan borç hesaplar (Faturalar tutar toplamı − Ödemeler tutar toplamı).
  * @param {string} ad
  * @param {Spreadsheet} ss
  * @return {number}
@@ -50,6 +50,53 @@ function computeSupplierBalance(ad, ss) {
   }
 
   return borc - odenen;
+}
+
+/**
+ * Tedarikçiler sayfasındaki KalanBorc (bakiye) sütununu günceller.
+ * ad verilirse yalnız o tedarikçi; yoksa tüm satırlar.
+ * @param {string=} ad — isteğe bağlı tedarikçi adı
+ * @return {{ok: boolean, message: string, updated: number}}
+ */
+function refreshSupplierBalances(ad) {
+  var cfg = getConfig();
+  var got = getSandboxSheet(cfg.SHEETS.TEDARIKCILER);
+  if (!got.ok) {
+    return { ok: false, message: got.message, updated: 0 };
+  }
+
+  var data = getDataRows(got.sheet);
+  var filterKey = ad ? normalizeKeyPart(ad) : '';
+  var updated = 0;
+  var i;
+
+  for (i = 0; i < data.length; i++) {
+    var rowAd = data[i][0];
+    if (filterKey && normalizeKeyPart(rowAd) !== filterKey) {
+      continue;
+    }
+    var kalan = computeSupplierBalance(rowAd, got.ss);
+    try {
+      got.sheet.getRange(i + 2, 4).setValue(kalan);
+      updated++;
+    } catch (e) {
+      return {
+        ok: false,
+        message: 'Bakiye sütunu yazılamadı: ' + (e.message || e),
+        updated: updated
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    message: updated
+      ? ('Bakiye güncellendi (' + updated + ' satır).')
+      : (filterKey
+        ? 'Bu adla tedarikçi satırı bulunamadı; bakiye hesaplanır ama satır yok.'
+        : 'Güncellenecek tedarikçi yok.'),
+    updated: updated
+  };
 }
 
 /**
@@ -107,18 +154,14 @@ function listSuppliers() {
     return { ok: false, message: got.message, rows: [] };
   }
 
+  refreshSupplierBalances();
+
   var data = getDataRows(got.sheet);
   var rows = [];
   for (var i = 0; i < data.length; i++) {
     var r = data[i];
     var ad = r[0];
     var kalan = computeSupplierBalance(ad, got.ss);
-    // Özet sütununu güncelle (sandbox; canlı değil)
-    try {
-      got.sheet.getRange(i + 2, 4).setValue(kalan);
-    } catch (e) {
-      // salt okuma bağlamında sessiz
-    }
     rows.push({
       row: i + 2,
       ad: ad,

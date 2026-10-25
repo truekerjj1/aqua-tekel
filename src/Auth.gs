@@ -5,7 +5,7 @@
  * Örnek e-postalar placeholder’dır; gerçek hesap uydurulmaz.
  *
  * Patron: tam yazma
- * Personel: gelir / gider / tedarikçi yazabilir; silme / ayar yok
+ * Personel: gelir / gider / tedarikçi / fatura / ödeme yazabilir; silme / ayar yok
  * Misafir: salt okuma
  */
 
@@ -106,7 +106,7 @@ function requireRole(requiredRole, email) {
 }
 
 /**
- * Gelir / gider / tedarikçi yazabilir mi? (patron veya personel)
+ * Gelir / gider / tedarikçi / fatura / ödeme yazabilir mi? (patron veya personel)
  * @param {string=} email
  * @return {boolean}
  */

@@ -83,8 +83,17 @@ KalanBorc(tedarikçi) = Σ Faturalar.Tutar(tedarikçi) − Σ Odemeler.Tutar(ted
 ```
 
 - Aynı **Ad** yazımı kullanılmalı (büyük/küçük harf ve boşluk farkı borç hesabını bozar).
-- `Tedarikçiler!KalanBorc` sütunu özet içindir; resmi kaynak Faturalar − Odemeler toplamıdır.
+- `Tedarikçiler!KalanBorc` sütunu özet / bakiye içindir; resmi kaynak Faturalar − Odemeler toplamıdır.
+- `refreshSupplierBalances()` (Suppliers.gs) bu sütunu yeniden yazar; fatura/ödeme eklenince de çağrılır.
 - Negatif sonuç: fazla ödeme / avans (ileride ayrı işaretlenebilir).
+
+### CRUD dosyaları
+
+| Sayfa | Dosya | Fonksiyonlar |
+|--------|--------|--------------|
+| Faturalar | `src/Invoices.gs` | `addInvoice`, `listInvoices`, `updateInvoice` |
+| Odemeler | `src/Payments.gs` | `addPayment`, `listPayments`, `updatePayment` |
+| Tedarikçiler | `src/Suppliers.gs` | `computeSupplierBalance`, `refreshSupplierBalances`, … |
 
 ---
 

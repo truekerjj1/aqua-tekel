@@ -77,7 +77,7 @@
 
         <section class="tab-panel" id="panel-tedarikci" role="tabpanel" hidden>
           <h2 class="section-title">Tedarikçi</h2>
-          <p class="hint">Kalan borç = Faturalar − Ödemeler (hesaplanır).</p>
+          <p class="hint">Kalan borç = Faturalar tutar toplamı − Ödemeler tutar toplamı.</p>
           <form class="form" id="form-tedarikci">
             <label>Ad <input name="ad" type="text" required /></label>
             <label>Telefon <input name="telefon" type="text" /></label>
@@ -86,6 +86,26 @@
           </form>
           <p class="form-msg" id="msg-tedarikci" hidden></p>
           <ul class="list" id="list-tedarikci"></ul>
+
+          <h3 class="section-title">Fatura ekle</h3>
+          <form class="form" id="form-fatura">
+            <label>Fatura no <input name="faturaNo" type="text" required /></label>
+            <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
+            <label>Tedarikçi <input name="tedarikci" type="text" required /></label>
+            <label>Tutar <input name="tutar" type="text" inputmode="decimal" required /></label>
+            <button type="submit" class="btn">Fatura ekle</button>
+          </form>
+          <p class="form-msg" id="msg-fatura" hidden></p>
+
+          <h3 class="section-title">Ödeme ekle</h3>
+          <form class="form" id="form-odeme">
+            <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
+            <label>Tedarikçi <input name="tedarikci" type="text" required /></label>
+            <label>Tutar <input name="tutar" type="text" inputmode="decimal" required /></label>
+            <label>Yöntem <input name="yontem" type="text" placeholder="Nakit" /></label>
+            <button type="submit" class="btn">Ödeme ekle</button>
+          </form>
+          <p class="form-msg" id="msg-odeme" hidden></p>
         </section>
       </main>
     </div>

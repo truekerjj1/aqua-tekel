@@ -13,9 +13,11 @@ Bu dosya, bilgisayar kapalıyken GitHub’da yapılan sandbox işlerini ve eve d
 | Sayfa şeması | `sheets/SEMASI.md` — sütunlar, kalan borç, çift kayıt |
 | Bootstrap / Config | Test başlıkları şema ile uyumlu; `PATRON_EMAILS` / `PERSONEL_EMAILS` placeholder |
 | Gelir / Gider / Tedarikçi | Aktif tabloya yazan sandbox CRUD (`getActiveSpreadsheet`) |
+| Fatura / Ödeme | `Invoices.gs` / `Payments.gs` CRUD; kalan borç = Faturalar − Ödemeler |
+| Bakiye | `refreshSupplierBalances()` → `Tedarikçiler!KalanBorc` |
 | Çift kayıt | `Dedup.gs` — tarih+tutar+açıklama veya faturaNo+tedarikçi |
 | Yetki | Patron tam; personel yazma; misafir salt okuma |
-| Panel UI | Mobil sekmeler: Özet / Gelir / Gider / Tedarikçi (+ Test ortamı etiketi) |
+| Panel UI | Özet / Gelir / Gider / Tedarikçi (+ fatura/ödeme formları, kalan borç) |
 
 Kaynak: [https://github.com/truekerjj1/aqua-tekel](https://github.com/truekerjj1/aqua-tekel) — `main`.
 
