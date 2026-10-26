@@ -71,7 +71,10 @@ function refreshSupplierBalances(ad) {
   var i;
 
   for (i = 0; i < data.length; i++) {
-    var rowAd = data[i][0];
+    var rowAd = String(data[i][0] != null ? data[i][0] : '').trim();
+    if (!rowAd) {
+      continue;
+    }
     if (filterKey && normalizeKeyPart(rowAd) !== filterKey) {
       continue;
     }
@@ -161,7 +164,11 @@ function listSuppliers() {
   var rows = [];
   for (var i = 0; i < data.length; i++) {
     var r = data[i];
-    var ad = r[0];
+    var ad = String(r[0] != null ? r[0] : '').trim();
+    // Boş / placeholder satırları listeye alma (boş <li> üretmesin)
+    if (!ad) {
+      continue;
+    }
     var kalan = computeSupplierBalance(ad, got.ss);
     rows.push({
       row: i + 2,

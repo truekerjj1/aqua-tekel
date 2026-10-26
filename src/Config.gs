@@ -28,13 +28,30 @@ var CONFIG = {
   // Başlık satırları — Bootstrap.gs TEST_SAYFALARI ile aynı olmalı
   HEADERS: {
     GELIR: ['Tarih', 'Tutar', 'Açıklama', 'Kategori', 'Kaynak', 'Not'],
-    GIDER: ['Tarih', 'Tutar', 'Açıklama', 'Tedarikçi', 'Kategori', 'Not'],
+    // Gider tedarikçi kullanmaz — kategori seçimi (GIDER_KATEGORILERI)
+    GIDER: ['Tarih', 'Tutar', 'Açıklama', 'Kategori', 'Not'],
     TEDARIKCILER: ['Ad', 'Telefon', 'Not', 'KalanBorc'],
     FATURALAR: ['FaturaNo', 'Tarih', 'Tedarikçi', 'Tutar', 'Vade', 'Durum', 'Not'],
     ODEMELER: ['Tarih', 'Tedarikçi', 'Tutar', 'Yöntem', 'FaturaNo', 'Not'],
     // Kod sütunu sheet’te tutulmaz; erişim kodları yalnızca CONFIG.TEST_USERS (test only).
     KULLANICILAR: ['E-posta', 'Rol', 'Ad', 'Aktif']
   },
+
+  /**
+   * Gider formu kategori seçenekleri (tedarikçi yok).
+   * Panel select + SampleData ile uyumlu.
+   */
+  GIDER_KATEGORILERI: [
+    'Yemek',
+    'Mutfak',
+    'Temizlik',
+    'Market',
+    'Muhasebe',
+    'Kira',
+    'Elektrik',
+    'Su',
+    'Diğer'
+  ],
 
   /**
    * Yetki listeleri — örnek placeholder (gerçek hesap değil).

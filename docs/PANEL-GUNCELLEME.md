@@ -1,4 +1,4 @@
-# Panel güncelleme — yetki + UI (Windows)
+# Panel güncelleme — gider / fatura / tedarikçi listesi (Windows)
 
 Yalnızca **test**. Canlı muhasebe tablosuna bağlanmayın.  
 Tablo: **Aqua TEKEL TEST PROJESİ** → **Uzantılar → Apps Script**
@@ -14,20 +14,32 @@ GitHub’da dosyaya tıklayın → **Raw** → tümünü kopyala → Apps Script
 |---|-----------------|----------------|
 | 1 | `Config` | `src/Config.gs` |
 | 2 | `Auth` | `src/Auth.gs` |
-| 3 | `Utils` | `src/Utils.gs` |
-| 4 | `Income` | `src/Income.gs` |
-| 5 | `Expense` | `src/Expense.gs` |
-| 6 | `Payments` | `src/Payments.gs` |
-| 7 | `Suppliers` | `src/Suppliers.gs` |
-| 8 | `Invoices` | `src/Invoices.gs` |
-| 9 | `Main` | `src/Main.gs` |
-| 10 | `ui/Styles` | `ui/Styles.html` |
-| 11 | `ui/Index` | `ui/Index.html` |
-| 12 | `ui/Client` | `ui/Client.html` |
+| 3 | `Bootstrap` | `src/Bootstrap.gs` |
+| 4 | `Expense` | `src/Expense.gs` |
+| 5 | `Invoices` | `src/Invoices.gs` |
+| 6 | `Suppliers` | `src/Suppliers.gs` |
+| 7 | `SampleData` | `src/SampleData.gs` |
+| 8 | `Main` | `src/Main.gs` |
+| 9 | `ui/Styles` | `ui/Styles.html` |
+| 10 | `ui/Index` | `ui/Index.html` |
+| 11 | `ui/Client` | `ui/Client.html` |
 
 `ui/...` adını **tam böyle** yazın (eğik çizgi dahil). HTML yoksa: **+ → HTML**.
 
-`Config` değişmediyse bile Auth ile birlikte kontrol edin (`TEST_USERS` aynı kalır).
+`Styles` değişmediyse bile Index/Client ile birlikte kontrol edin.
+
+---
+
+## Gider sayfası başlığı (önemli)
+
+Eski Gider sekmesinde **Tedarikçi** sütunu varsa:
+
+1. Test tablosunda **Gider** sayfasını silin **veya** 1. satırı  
+   `Tarih | Tutar | Açıklama | Kategori | Not` olacak şekilde düzeltin  
+2. Menü → **Aqua Tekel (Test)** → **Test sayfalarını kur** (eksikse oluşturur)  
+3. İsteğe bağlı: **Örnek test verisi yükle**
+
+Yeni şema tedarikçi sütunu kullanmaz; kategori zorunlu.
 
 ---
 
@@ -38,7 +50,7 @@ GitHub’da dosyaya tıklayın → **Raw** → tümünü kopyala → Apps Script
    (veya ilk kez: New deployment → Web app · **Me** · **Only myself**)
 3. Web App linkini açın
 
-**Beklenen:** açık yeşil mobil panel · **AQUA TEKEL** · **TEST MODU** · giriş · rolüne göre sekmeler
+**Beklenen:** personel fatura formu görür · giderde kategori select · tedarikçi listesinde boş satır yok
 
 ---
 
@@ -47,11 +59,11 @@ GitHub’da dosyaya tıklayın → **Raw** → tümünü kopyala → Apps Script
 | | Patron | Personel |
 |--|--------|----------|
 | Gelir / Gider / Ödeme | evet | evet |
-| Fatura ekle | evet | hayır (liste OK) |
+| Fatura ekle | evet | **evet** |
 | Tedarikçi sekmesi | evet | **yok** |
 | Ayarlar | evet | **yok** |
 
-Sunucu da kontrol eder (`requirePatron` / `requirePersonelOrPatron`). UI gizlemek yetmez.
+Sunucu da kontrol eder. Tedarikçi ekleme hâlâ yalnız patron.
 
 ---
 

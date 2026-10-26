@@ -140,15 +140,24 @@
           <!-- Gider -->
           <section class="tab-panel" id="panel-gider" role="tabpanel" hidden>
             <h2 class="section-title">Gider ekle</h2>
-            <p class="hint">Tedarikçiyi listeden seçin (yeni tedarikçi eklemek patron işidir).</p>
+            <p class="hint">Gider tedarikçi ile ilgili değildir. Kategori seçin.</p>
             <form class="form" id="form-gider">
               <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
               <label>Tutar <input name="tutar" type="text" inputmode="decimal" placeholder="50" required /></label>
               <label>Açıklama <input name="aciklama" type="text" required /></label>
               <label>
-                Tedarikçi
-                <select name="tedarikci" id="select-gider-tedarikci">
-                  <option value="">Tedarikçi seçin (isteğe bağlı)</option>
+                Kategori
+                <select name="kategori" id="select-gider-kategori" required>
+                  <option value="">Kategori seçin</option>
+                  <option value="Yemek">Yemek</option>
+                  <option value="Mutfak">Mutfak</option>
+                  <option value="Temizlik">Temizlik</option>
+                  <option value="Market">Market</option>
+                  <option value="Muhasebe">Muhasebe</option>
+                  <option value="Kira">Kira</option>
+                  <option value="Elektrik">Elektrik</option>
+                  <option value="Su">Su</option>
+                  <option value="Diğer">Diğer</option>
                 </select>
               </label>
               <button type="submit" class="btn">Gider ekle</button>
@@ -182,8 +191,8 @@
           <!-- Fatura -->
           <section class="tab-panel" id="panel-fatura" role="tabpanel" hidden>
             <h2 class="section-title">Faturalar</h2>
-            <p class="hint" id="hint-fatura">Patron fatura ekler. Personel yalnız listeler.</p>
-            <form class="form patron-only" id="form-fatura" hidden>
+            <p class="hint" id="hint-fatura">Patron ve personel fatura ekleyebilir. Tedarikçiyi listeden seçin.</p>
+            <form class="form" id="form-fatura">
               <label>Fatura no <input name="faturaNo" type="text" required /></label>
               <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
               <label>
@@ -231,7 +240,7 @@
               </div>
               <div>
                 <dt>Yetki</dt>
-                <dd>Tedarikçi + fatura + ayar: patron · Günlük işlem: patron/personel</dd>
+                <dd>Tedarikçi + ayar: patron · Gelir / gider / ödeme / fatura: patron/personel</dd>
               </div>
             </dl>
             <p class="hint">Test kullanıcıları <code>Config.TEST_USERS</code> içindedir; sheet’e kod yazılmaz.</p>

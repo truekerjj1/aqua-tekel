@@ -34,7 +34,7 @@ function showPanelOpenInstructions() {
       '4) Açılan Web App linkine tıklayın.\n\n' +
       'Beklenen: Güvenli giriş + TEST MODU + rol sekmeleri\n' +
       'Test: Fatih TEST4567 (patron) · Sercan TEST2345 (personel)\n' +
-      'Tedarikçi yalnız patron; personel ödeme/gelir/gider yapar.\n\n' +
+      'Tedarikçi yalnız patron; personel gelir/gider/ödeme/fatura ekler.\n\n' +
       'Ayrıntılı adımlar: PANEL-GUNCELLEME.md / PANEL-KURULUM.md',
     ui.ButtonSet.OK
   );

@@ -11,7 +11,7 @@
  * | Gelir ekle/liste     | evet   | evet     |
  * | Gider ekle/liste     | evet   | evet     |
  * | Ödeme ekle (dropdown)| evet   | evet     |
- * | Fatura ekle          | evet   | hayır (liste görüntüleyebilir) |
+ * | Fatura ekle          | evet   | evet     |
  * | Tedarikçi ekle/düzenle / sekme | evet | hayır |
  * | Ayarlar / kullanıcı  | evet   | hayır    |
  * | Çıkış                | evet   | evet     |
@@ -211,12 +211,12 @@ function buildPublicSession_(session) {
     id: session.id,
     ad: session.ad,
     rol: rol,
-    /** Günlük işlem: gelir / gider / ödeme */
+    /** Günlük işlem: gelir / gider / ödeme / fatura */
     canWrite: isStaff,
     /** Tedarikçi ekle / düzenle / sekme — yalnız patron */
     canManageSuppliers: isPatron,
-    /** Fatura ekle / düzenle — yalnız patron (personel listeleyebilir) */
-    canManageInvoices: isPatron,
+    /** Fatura ekle — patron veya personel */
+    canManageInvoices: isStaff,
     /** Ayarlar / kullanıcı / silme — yalnız patron */
     canManage: isPatron
   };
@@ -344,7 +344,7 @@ function requirePersonelOrPatron(email) {
 
 /**
  * Gelir / gider / ödeme yazabilir mi? (patron veya personel)
- * Tedarikçi / fatura yazma ayrı — canManageSuppliers / canManageInvoices.
+ * Tedarikçi yazma ayrı — canManageSuppliers. Fatura: canManageInvoices.
  * @param {string=} email
  * @return {boolean}
  */
@@ -362,12 +362,12 @@ function canManageSuppliers(email) {
 }
 
 /**
- * Fatura ekle / düzenle — yalnız patron.
+ * Fatura ekle / düzenle — patron veya personel.
  * @param {string=} email
  * @return {boolean}
  */
 function canManageInvoices(email) {
-  return requirePatron(email);
+  return requirePersonelOrPatron(email);
 }
 
 /**
@@ -425,23 +425,17 @@ function denyUnlessSupplierManager() {
 }
 
 /**
- * Fatura ekleme / düzenleme — yalnız patron.
+ * Fatura ekleme / düzenleme — patron veya personel.
  * @return {{ok: boolean, message: string}|null} null = yetki var
  */
 function denyUnlessInvoiceManager() {
-  if (requirePatron()) {
+  if (requirePersonelOrPatron()) {
     return null;
-  }
-  var role = getUserRole();
-  if (role === ROLLER.MISAFIR) {
-    return {
-      ok: false,
-      message: 'Fatura eklemek için giriş yapın. Faturaları yalnız patron ekler.'
-    };
   }
   return {
     ok: false,
-    message: 'Fatura ekleme / düzenleme yalnız patron içindir. Personel faturaları görüntüleyebilir.'
+    message:
+      'Fatura eklemek için giriş yapın. Personel ve patron fatura ekleyebilir; tedarikçi ekleme yalnız patron.'
   };
 }
 

@@ -34,7 +34,6 @@
       ayarlar: document.getElementById('panel-ayarlar')
     };
     var supplierSelectIds = [
-      'select-gider-tedarikci',
       'select-fatura-tedarikci',
       'select-odeme-tedarikci'
     ];
@@ -91,7 +90,11 @@
 
     function applyRoleUi(session) {
       var patron = isPatron(session);
-      var canInvoices = !!(session && (session.canManageInvoices || patron));
+      var canWrite = !!(
+        session &&
+        (session.canWrite || session.canManageInvoices || patron ||
+          session.rol === 'personel')
+      );
 
       document.querySelectorAll('.tab-patron').forEach(function (btn) {
         btn.hidden = !patron;
@@ -105,11 +108,12 @@
       if (ayarEl) {
         ayarEl.textContent = patron ? 'Açık (patron)' : 'Kapalı (personel)';
       }
-      if (formFatura) formFatura.hidden = !canInvoices;
+      // Fatura formu: patron + personel (tedarikçi ekleme hâlâ patron)
+      if (formFatura) formFatura.hidden = !canWrite;
       if (hintFatura) {
-        hintFatura.textContent = canInvoices
+        hintFatura.textContent = canWrite
           ? 'Yeni fatura ekleyin. Tedarikçiyi listeden seçin.'
-          : 'Personel faturaları görüntüleyebilir; ekleme yalnız patron.';
+          : 'Fatura eklemek için giriş yapın.';
       }
 
       // Personelde gizli sekmedeyse Özet’e dön
@@ -136,31 +140,69 @@
       if (keep) loginUser.value = keep;
     }
 
+    function realSupplierRows(rows) {
+      return (rows || []).filter(function (r) {
+        return r && String(r.ad || '').trim();
+      });
+    }
+
     function fillSupplierSelects(rows) {
+      var real = realSupplierRows(rows);
       supplierSelectIds.forEach(function (id) {
         var sel = document.getElementById(id);
         if (!sel) return;
         var prev = sel.value;
-        var firstLabel =
-          id === 'select-gider-tedarikci'
-            ? 'Tedarikçi seçin (isteğe bağlı)'
-            : 'Tedarikçi seçin';
         sel.innerHTML = '';
         var opt0 = document.createElement('option');
         opt0.value = '';
-        opt0.textContent = firstLabel;
+        opt0.textContent = 'Tedarikçi seçin';
         sel.appendChild(opt0);
-        (rows || []).forEach(function (r) {
+        real.forEach(function (r) {
+          var ad = String(r.ad).trim();
           var opt = document.createElement('option');
-          opt.value = r.ad || '';
-          opt.textContent = r.ad || '';
+          opt.value = ad;
+          opt.textContent = ad;
           sel.appendChild(opt);
         });
         if (prev) sel.value = prev;
       });
     }
 
+    function fillExpenseCategories(categories) {
+      var sel = document.getElementById('select-gider-kategori');
+      if (!sel) return;
+      var prev = sel.value;
+      var list =
+        categories && categories.length
+          ? categories
+          : [
+              'Yemek',
+              'Mutfak',
+              'Temizlik',
+              'Market',
+              'Muhasebe',
+              'Kira',
+              'Elektrik',
+              'Su',
+              'Diğer'
+            ];
+      sel.innerHTML = '';
+      var opt0 = document.createElement('option');
+      opt0.value = '';
+      opt0.textContent = 'Kategori seçin';
+      sel.appendChild(opt0);
+      list.forEach(function (name) {
+        if (!name) return;
+        var opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      if (prev) sel.value = prev;
+    }
+
     function debtItemHtml(r) {
+      var phone = r.telefon ? String(r.telefon).trim() : '';
       return (
         '<div class="debt-row">' +
         '<strong>' +
@@ -170,9 +212,7 @@
         formatTutar(r.kalanBorc) +
         ' ₺</span>' +
         '</div>' +
-        (r.telefon
-          ? '<div class="muted">' + r.telefon + '</div>'
-          : '<div class="muted">Kalan borç</div>')
+        (phone ? '<div class="muted">' + phone + '</div>' : '')
       );
     }
 
@@ -212,7 +252,7 @@
           ? 'Tanımlı (test)'
           : 'Henüz yok (YOUR_SPREADSHEET_ID)';
       yazmaEl.textContent = bilgi.canWrite
-        ? 'Açık (gelir / gider / ödeme)'
+        ? 'Açık (gelir / gider / ödeme / fatura)'
         : 'Kapalı (misafir)';
       if (ayarEl) {
         ayarEl.textContent = bilgi.canManage
@@ -291,16 +331,25 @@
       var ul = document.getElementById(ulId);
       if (!ul) return;
       ul.innerHTML = '';
-      if (!items || !items.length) {
+      var list = items || [];
+      // Tedarikçi listelerinde boş ad / boş HTML satırı render etme
+      if (ulId === 'list-tedarikci' || ulId === 'list-borc-ozet') {
+        list = realSupplierRows(list);
+      }
+      if (!list.length) {
         var empty = document.createElement('li');
         empty.className = 'muted';
         empty.textContent = 'Kayıt yok veya sayfa kurulmadı.';
         ul.appendChild(empty);
         return;
       }
-      items.forEach(function (item) {
+      list.forEach(function (item) {
+        var html = mapper(item);
+        if (!html || !String(html).replace(/<[^>]*>/g, '').trim()) {
+          return;
+        }
         var li = document.createElement('li');
-        li.innerHTML = mapper(item);
+        li.innerHTML = html;
         ul.appendChild(li);
       });
     }
@@ -334,7 +383,7 @@
 
     function loadGider() {
       if (!hasGas()) return;
-      refreshSupplierOptions();
+      refreshExpenseCategories();
       google.script.run
         .withSuccessHandler(function (res) {
           if (!res || !res.ok) {
@@ -347,7 +396,10 @@
             return (
               '<strong>' + (r.tutar != null ? r.tutar : '—') + '</strong> · ' +
               (r.aciklama || '') +
-              '<div class="muted">' + (r.tarih || '') + ' · ' + (r.tedarikci || '') + '</div>'
+              '<div class="muted">' +
+              (r.tarih || '') +
+              (r.kategori ? ' · ' + r.kategori : '') +
+              '</div>'
             );
           });
         })
@@ -355,6 +407,21 @@
           setMsg('msg-gider', 'Gider listesi alınamadı.', false);
         })
         .listExpense({});
+    }
+
+    function refreshExpenseCategories() {
+      if (!hasGas()) {
+        fillExpenseCategories(null);
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (res && res.ok) {
+            fillExpenseCategories(res.categories || []);
+          }
+        })
+        .withFailureHandler(function () {})
+        .listExpenseCategories();
     }
 
     function loadOdeme() {
@@ -449,7 +516,7 @@
           }
           setMsg('msg-tedarikci', '', true);
           fillSupplierSelects(res.rows || []);
-          renderList('list-tedarikci', res.rows, debtItemHtml);
+          renderList('list-tedarikci', realSupplierRows(res.rows), debtItemHtml);
         })
         .withFailureHandler(function () {
           setMsg('msg-tedarikci', 'Tedarikçi listesi alınamadı.', false);
@@ -490,6 +557,10 @@
           return;
         }
         var kayit = formValues(formGider);
+        if (!kayit.kategori) {
+          setMsg('msg-gider', 'Kategori seçin.', false);
+          return;
+        }
         google.script.run
           .withSuccessHandler(function (res) {
             setMsg('msg-gider', res.message || '', !!res.ok);
@@ -546,10 +617,6 @@
         e.preventDefault();
         if (!hasGas()) {
           setMsg('msg-fatura', 'Yalnızca Apps Script Web App içinde çalışır.', false);
-          return;
-        }
-        if (!isPatron(currentSession)) {
-          setMsg('msg-fatura', 'Fatura ekleme yalnız patron içindir.', false);
           return;
         }
         var kayit = formValues(formFatura);
