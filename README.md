@@ -13,10 +13,12 @@ Depo: [https://github.com/truekerjj1/aqua-tekel](https://github.com/truekerjj1/a
 ## Paneli kurmak / güncellemek
 
 - İlk kurulum: **[PANEL-KURULUM.md](./PANEL-KURULUM.md)**
-- Giriş ekranı güncellemesi (yeniden yapıştırma sırası): **[docs/PANEL-GUNCELLEME.md](./docs/PANEL-GUNCELLEME.md)**
+- Yetki + UI güncellemesi (Windows yapıştırma sırası): **[docs/PANEL-GUNCELLEME.md](./docs/PANEL-GUNCELLEME.md)**
 
-Beklenen ilk ekran: **Güvenli giriş** + **TEST MODU** rozeti (açık yeşil-beyaz).  
-Test kodu örneği: `TEST1234` (`Config.TEST_USERS` — canlı şifre değil).
+Beklenen ilk ekran: **Güvenli giriş** + **TEST MODU** rozeti (açık yeşil mobil Web App).  
+Test: Fatih `TEST4567` (patron) · Sercan `TEST2345` (personel) — `Config.TEST_USERS` (canlı şifre değil).
+
+**Yetki:** Tedarikçi / fatura ekleme / ayar → yalnız **patron**. Personel gelir, gider, ödeme (tedarikçi dropdown) yapar; tedarikçi kaydı oluşturamaz. Kontroller sunucuda (`Auth.gs`).
 
 Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / örnek veri / panel talimatı.
 

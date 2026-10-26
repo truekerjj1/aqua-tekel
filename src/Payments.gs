@@ -11,6 +11,7 @@
  * @return {{ok: boolean, message: string}}
  */
 function addPayment(kayit) {
+  // Ödeme: patron veya personel — tedarikçiyi listeden seçer, kayıt oluşturmaz.
   var denied = denyUnlessWriter();
   if (denied) {
     return denied;
