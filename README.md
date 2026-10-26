@@ -37,7 +37,7 @@ Ayrıntılı Windows adımları: store dokümanı veya `local/README.md`.
 - İlk kurulum: **[PANEL-KURULUM.md](./PANEL-KURULUM.md)**
 - Yönetici / onay / ödeme yöntemi / dekont: **[docs/PANEL-GUNCELLEME.md](./docs/PANEL-GUNCELLEME.md)**
 
-Beklenen ilk ekran: **Güvenli giriş** + **TEST MODU** rozeti (açık yeşil mobil Web App).  
+Beklenen ilk ekran: **AQUA TEKEL** markası + **Güvenli giriş** + siyah/sarı **LOCALHOST TEST** rozeti.  
 Test: Fatih `TEST4567` (patron) · Sercan `TEST2345` (personel) — `Config.TEST_USERS` (canlı şifre değil).
 
 **Yetki:** Yönetici / onay / tedarikçi düzenle-sil → yalnız **patron**. Personel gelir, gider, ödeme, fatura ekler (onaya düşer); profilinde son işlemlerini görür.

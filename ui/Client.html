@@ -280,11 +280,6 @@
 
       if (!listBorcOzet) return;
       var items = summary.tedarikciler || [];
-      if (!items.length) {
-        listBorcOzet.hidden = true;
-        listBorcOzet.innerHTML = '';
-        return;
-      }
       listBorcOzet.hidden = false;
       renderList('list-borc-ozet', items, function (r) {
         var phone = r.telefon ? String(r.telefon).trim() : '';
@@ -443,6 +438,20 @@
         .uploadDekont(payload);
     }
 
+    var EMPTY_LIST_MSG = {
+      'list-gelir': 'Henüz gelir kaydı yok.',
+      'list-gider': 'Henüz gider kaydı yok.',
+      'list-odeme': 'Henüz ödeme kaydı yok.',
+      'list-fatura': 'Henüz fatura kaydı yok.',
+      'list-profil': 'Bu kullanıcıya ait işlem yok.',
+      'list-onay': 'Bekleyen onay yok.',
+      'list-tedarikci': 'Aktif tedarikçi yok. Aşağıdan ekleyebilirsiniz.',
+      'list-borc-ozet': 'Gösterilecek tedarikçi borcu yok.',
+      'list-admin-filtre': 'Filtreye uyan kayıt yok.',
+      'list-admin-aktivite': 'Henüz aktivite yok.',
+      'list-admin-users': 'Kullanıcı listesi boş.'
+    };
+
     function renderList(ulId, items, mapper) {
       var ul = document.getElementById(ulId);
       if (!ul) return;
@@ -453,11 +462,19 @@
       }
       if (!list.length) {
         var empty = document.createElement('li');
-        empty.className = 'muted';
-        empty.textContent = 'Kayıt yok veya sayfa kurulmadı.';
+        empty.className = 'list-empty muted';
+        empty.textContent = EMPTY_LIST_MSG[ulId] || 'Henüz kayıt yok.';
         ul.appendChild(empty);
         return;
       }
+      if (!mapper) {
+        var noMap = document.createElement('li');
+        noMap.className = 'list-empty muted';
+        noMap.textContent = EMPTY_LIST_MSG[ulId] || 'Henüz kayıt yok.';
+        ul.appendChild(noMap);
+        return;
+      }
+      var added = 0;
       list.forEach(function (item) {
         var html = mapper(item);
         if (!html || !String(html).replace(/<[^>]*>/g, '').trim()) {
@@ -466,7 +483,14 @@
         var li = document.createElement('li');
         li.innerHTML = html;
         ul.appendChild(li);
+        added += 1;
       });
+      if (!added) {
+        var none = document.createElement('li');
+        none.className = 'list-empty muted';
+        none.textContent = EMPTY_LIST_MSG[ulId] || 'Henüz kayıt yok.';
+        ul.appendChild(none);
+      }
     }
 
     function loadGelir() {
@@ -1123,7 +1147,7 @@
       formGelir.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!hasGas()) {
-          setMsg('msg-gelir', 'Yalnızca Apps Script Web App içinde çalışır.', false);
+          setMsg('msg-gelir', 'Kayıt için sunucu bağlantısı gerekli.', false);
           return;
         }
         var kayit = formValues(formGelir);
@@ -1147,7 +1171,7 @@
       formGider.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!hasGas()) {
-          setMsg('msg-gider', 'Yalnızca Apps Script Web App içinde çalışır.', false);
+          setMsg('msg-gider', 'Kayıt için sunucu bağlantısı gerekli.', false);
           return;
         }
         var kayit = formValues(formGider);
@@ -1177,7 +1201,7 @@
         if (!hasGas()) {
           setMsg(
             'msg-tedarikci',
-            'Yalnızca Apps Script Web App içinde çalışır.',
+            'Kayıt için sunucu bağlantısı gerekli.',
             false
           );
           return;
@@ -1230,7 +1254,7 @@
       formFatura.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!hasGas()) {
-          setMsg('msg-fatura', 'Yalnızca Apps Script Web App içinde çalışır.', false);
+          setMsg('msg-fatura', 'Kayıt için sunucu bağlantısı gerekli.', false);
           return;
         }
         var kayit = formValues(formFatura);
@@ -1276,7 +1300,7 @@
       formOdeme.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!hasGas()) {
-          setMsg('msg-odeme', 'Yalnızca Apps Script Web App içinde çalışır.', false);
+          setMsg('msg-odeme', 'Kayıt için sunucu bağlantısı gerekli.', false);
           return;
         }
         var kayit = formValues(formOdeme);
@@ -1328,7 +1352,7 @@
         if (!hasGas()) {
           setMsg(
             'msg-login',
-            'Yalnızca Apps Script Web App içinde giriş yapılır.',
+            'Giriş için sunucu bağlantısı gerekli (localhost veya Web App).',
             false
           );
           return;
@@ -1423,7 +1447,7 @@
         showLogin();
         setMsg(
           'msg-login',
-          'Önizleme: Apps Script Web App’te giriş çalışır.',
+          'Önizleme modu: sunucu yoksa giriş çalışmaz. Localhost’ta npm start kullanın.',
           true
         );
         return;
