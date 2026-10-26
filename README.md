@@ -10,7 +10,29 @@ Depo: [https://github.com/truekerjj1/aqua-tekel](https://github.com/truekerjj1/a
 
 ---
 
-## Paneli kurmak / güncellemek
+## Bilgisayarda dene (önerilen — yapıştırma yok)
+
+Google’a kod yapıştırmadan önce paneli kendi bilgisayarınızda açın:
+
+1. [Node.js](https://nodejs.org/) kurun (LTS sürüm yeterli).
+2. Bu depoyu bilgisayara indirin (`git clone` veya ZIP).
+3. Klasörde terminal açıp:
+
+```bash
+npm start
+```
+
+4. Tarayıcıda açın: **http://localhost:8787**
+5. Giriş: **Fatih** / `TEST4567` (patron) veya **Sercan** / `TEST2345` (personel)
+
+Veriler bilgisayarda kalır (`local/data/`). Dekontlar `local/uploads/` klasörüne yazılır.  
+Canlı muhasebe veya Google Sheets’e bağlanmaz.
+
+Ayrıntılı Windows adımları: store dokümanı veya `local/README.md`.
+
+---
+
+## Paneli Google’da kurmak / güncellemek
 
 - İlk kurulum: **[PANEL-KURULUM.md](./PANEL-KURULUM.md)**
 - Yönetici / onay / ödeme yöntemi / dekont: **[docs/PANEL-GUNCELLEME.md](./docs/PANEL-GUNCELLEME.md)**
@@ -22,19 +44,25 @@ Test: Fatih `TEST4567` (patron) · Sercan `TEST2345` (personel) — `Config.TEST
 
 Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / örnek veri / panel talimatı.
 
+### İleride: `clasp push` (isteğe bağlı)
+
+Kod hazır olunca Google’a elle yapıştırmak yerine [clasp](https://github.com/google/clasp) ile `clasp push` kullanılabilir.  
+**Şimdiki öncelik localhost testtir**; clasp kurulumu zorunlu değildir.
+
 ---
 
 ## Ne var?
 
 | Bölüm | Açıklama |
 |--------|----------|
+| `local/` | Localhost mock sunucu + JSON veri + dekont klasörü |
 | `src/Main.gs` | Web App + tablo menüsü |
 | `src/Bootstrap.gs` | Test sayfalarını oluşturur (Onaylar dahil) |
 | `src/Config.gs` | Ayarlar + `TEST_USERS` + ödeme yöntemleri |
 | `src/Auth.gs` | Giriş / oturum / patron–personel |
 | `src/Approvals.gs` | Onay kuyruğu |
 | `src/Admin.gs` | Yönetici özet / filtre / grafik |
-| `src/Attachments.gs` | Dekont → Drive |
+| `src/Attachments.gs` | Dekont → Drive (Google’da) |
 | `src/Users.gs` | Kullanıcı yönetimi + sheet senkron |
 | `src/SampleData.gs` | Örnek test verisi |
 | `ui/` | Mobil panel HTML |
@@ -47,6 +75,7 @@ Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / örnek veri /
 - Web App: **Only myself**.
 - Erişim kodları yalnızca sandbox (`TEST_USERS` / sheet Kod — test only).
 - `.clasp.json` paylaşmayın (yalnızca `.clasp.json.example` vardır).
+- Localhost yalnızca test içindir; canlı cariye bağlanmaz.
 
 ---
 
@@ -56,16 +85,18 @@ Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / örnek veri /
 aqua-tekel/
 ├── PANEL-KURULUM.md
 ├── README.md
+├── package.json          ← npm start
 ├── docs/PANEL-GUNCELLEME.md
 ├── appsscript.json
 ├── .clasp.json.example
 ├── .gitignore
+├── local/                ← localhost mock (src/ui silinmez)
+│   ├── server.js
+│   ├── api.js, store.js, config.js
+│   ├── data/             ← JSON store (ilk çalıştırmada örnek veri)
+│   └── uploads/          ← dekont dosyaları
 ├── sheets/SEMASI.md
-├── src/
-│   ├── Main.gs, Bootstrap.gs, Config.gs, Auth.gs, Utils.gs
-│   ├── Income.gs, Expense.gs, Suppliers.gs, Invoices.gs, Payments.gs
-│   ├── Approvals.gs, Attachments.gs, Users.gs, Admin.gs
-│   ├── SampleData.gs, Dedup.gs
+├── src/                  ← Google Apps Script (production sandbox)
 └── ui/
     ├── Index.html, Styles.html, Client.html
 ```

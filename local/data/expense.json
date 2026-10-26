@@ -1,0 +1,26 @@
+[
+  {
+    "tarih": "04.10.2026",
+    "tutar": 200,
+    "aciklama": "Örnek yemek",
+    "kategori": "Yemek",
+    "not": "Örnek gider",
+    "kullanici": "Sercan Toprak"
+  },
+  {
+    "tarih": "11.10.2026",
+    "tutar": 85,
+    "aciklama": "Örnek temizlik",
+    "kategori": "Temizlik",
+    "not": "Örnek gider",
+    "kullanici": "Aleyna Toprak"
+  },
+  {
+    "tarih": "16.10.2026",
+    "tutar": 1200,
+    "aciklama": "Örnek kira payı",
+    "kategori": "Kira",
+    "not": "Örnek gider",
+    "kullanici": "Fatih Toprak"
+  }
+]

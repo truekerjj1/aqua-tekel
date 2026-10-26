@@ -1,0 +1,34 @@
+[
+  {
+    "id": "test-yalcin",
+    "email": "test-yalcin@example.com",
+    "rol": "patron",
+    "ad": "Yalçın Özeke",
+    "aktif": true,
+    "kod": "TEST1234"
+  },
+  {
+    "id": "test-sercan",
+    "email": "test-sercan@example.com",
+    "rol": "personel",
+    "ad": "Sercan Toprak",
+    "aktif": true,
+    "kod": "TEST2345"
+  },
+  {
+    "id": "test-aleyna",
+    "email": "test-aleyna@example.com",
+    "rol": "personel",
+    "ad": "Aleyna Toprak",
+    "aktif": true,
+    "kod": "TEST3456"
+  },
+  {
+    "id": "test-fatih",
+    "email": "test-fatih@example.com",
+    "rol": "patron",
+    "ad": "Fatih Toprak",
+    "aktif": true,
+    "kod": "TEST4567"
+  }
+]

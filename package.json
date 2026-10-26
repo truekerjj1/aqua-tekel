@@ -1,0 +1,13 @@
+{
+  "name": "aqua-tekel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aqua Tekel test paneli — localhost mock (canlı muhasebeye bağlanmaz)",
+  "scripts": {
+    "start": "node local/server.js",
+    "local": "node local/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

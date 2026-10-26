@@ -1,0 +1,38 @@
+[
+  {
+    "tarih": "08.10.2026",
+    "tedarikci": "Mavi Su Ltd",
+    "tutar": 500,
+    "yontem": "Nakit",
+    "faturaNo": "ORNEK-F001",
+    "not": "Örnek ödeme",
+    "kullanici": "Fatih Toprak",
+    "onayDurum": "Onaylandi",
+    "dekontFileId": "",
+    "dekontUrl": ""
+  },
+  {
+    "tarih": "12.10.2026",
+    "tedarikci": "Kaynak Dağıtım",
+    "tutar": 320,
+    "yontem": "Kredi kartı",
+    "faturaNo": "ORNEK-F002",
+    "not": "Örnek ödeme",
+    "kullanici": "Sercan Toprak",
+    "onayDurum": "Onaylandi",
+    "dekontFileId": "",
+    "dekontUrl": ""
+  },
+  {
+    "tarih": "18.10.2026",
+    "tedarikci": "Tekel Ambalaj",
+    "tutar": 200,
+    "yontem": "Vadeli",
+    "faturaNo": "ORNEK-F003",
+    "not": "Vadeli kayıt — borç düşmez",
+    "kullanici": "Sercan Toprak",
+    "onayDurum": "Bekliyor",
+    "dekontFileId": "",
+    "dekontUrl": ""
+  }
+]

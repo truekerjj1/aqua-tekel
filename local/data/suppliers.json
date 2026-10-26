@@ -1,0 +1,23 @@
+[
+  {
+    "ad": "Mavi Su Ltd",
+    "telefon": "0212 555 0101",
+    "not": "Örnek tedarikçi",
+    "kalanBorc": 1000,
+    "aktif": true
+  },
+  {
+    "ad": "Kaynak Dağıtım",
+    "telefon": "0216 555 0202",
+    "not": "Örnek tedarikçi",
+    "kalanBorc": 500,
+    "aktif": true
+  },
+  {
+    "ad": "Tekel Ambalaj",
+    "telefon": "0312 555 0303",
+    "not": "Örnek tedarikçi",
+    "kalanBorc": 450,
+    "aktif": true
+  }
+]
