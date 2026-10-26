@@ -52,6 +52,7 @@ var CONFIG = {
    * Sandbox panel kullanıcıları + kişisel erişim kodları.
    * test only — canlı şifre / gerçek erişim kodu değil; uydurma canlı kod yok.
    * Kodlar düz metin (sandbox kolaylığı); üretime taşınmaz.
+   * Örnek test: Fatih Toprak + TEST4567 (patron) · Sercan Toprak + TEST2345 (personel).
    */
   TEST_USERS: [
     { id: 'test-yalcin', ad: 'Yalçın Özeke', rol: 'patron', kod: 'TEST1234' },

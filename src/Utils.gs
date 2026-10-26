@@ -138,6 +138,8 @@ function getAppInfo() {
     userName: displayName,
     role: role,
     canWrite: canWriteRecords(),
+    canManageSuppliers: canManageSuppliers(),
+    canManageInvoices: canManageInvoices(),
     canManage: canManageSettings(),
     loggedIn: !!(sess && sess.loggedIn),
     session: (sess && sess.session) || null,

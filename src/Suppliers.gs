@@ -105,7 +105,8 @@ function refreshSupplierBalances(ad) {
  * @return {{ok: boolean, message: string}}
  */
 function addSupplier(tedarikci) {
-  var denied = denyUnlessWriter();
+  // Tedarikçi yalnız patron — personel ekleyemez (UI gizleme yetmez).
+  var denied = denyUnlessSupplierManager();
   if (denied) {
     return denied;
   }
@@ -180,7 +181,8 @@ function listSuppliers() {
  * @return {{ok: boolean, message: string}}
  */
 function updateSupplier(id, tedarikci) {
-  var denied = denyUnlessWriter();
+  // Tedarikçi düzenleme yalnız patron.
+  var denied = denyUnlessSupplierManager();
   if (denied) {
     return denied;
   }

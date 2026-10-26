@@ -11,6 +11,7 @@
  * @return {{ok: boolean, message: string, duplicate?: boolean}}
  */
 function addExpense(kayit) {
+  // Gider: patron veya personel (requirePersonelOrPatron).
   var denied = denyUnlessWriter();
   if (denied) {
     return denied;

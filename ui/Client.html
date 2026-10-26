@@ -10,7 +10,6 @@
     var yazmaEl = document.getElementById('yazma');
     var ayarEl = document.getElementById('ayar');
     var metaAyar = document.getElementById('meta-ayar');
-    var ayarlarBloku = document.getElementById('ayarlar-bloku');
     var summaryEl = document.getElementById('summary-totals');
     var sumGelirEl = document.getElementById('sum-gelir');
     var sumGiderEl = document.getElementById('sum-gider');
@@ -21,13 +20,18 @@
     var loginUser = document.getElementById('login-user');
     var loginCode = document.getElementById('login-code');
     var btnLogin = document.getElementById('btn-login');
+    var formFatura = document.getElementById('form-fatura');
+    var hintFatura = document.getElementById('hint-fatura');
     var currentSession = null;
     var tabs = document.querySelectorAll('.tab');
     var panels = {
       ozet: document.getElementById('panel-ozet'),
       gelir: document.getElementById('panel-gelir'),
       gider: document.getElementById('panel-gider'),
-      tedarikci: document.getElementById('panel-tedarikci')
+      odeme: document.getElementById('panel-odeme'),
+      fatura: document.getElementById('panel-fatura'),
+      tedarikci: document.getElementById('panel-tedarikci'),
+      ayarlar: document.getElementById('panel-ayarlar')
     };
     var supplierSelectIds = [
       'select-gider-tedarikci',
@@ -43,6 +47,10 @@
       if (rol === 'patron') return 'Patron';
       if (rol === 'personel') return 'Personel';
       return 'Misafir';
+    }
+
+    function isPatron(session) {
+      return !!(session && (session.canManage || session.rol === 'patron'));
     }
 
     function formatTutar(n) {
@@ -82,11 +90,32 @@
     }
 
     function applyRoleUi(session) {
-      var canManage = !!(session && session.canManage);
-      if (metaAyar) metaAyar.hidden = !canManage;
-      if (ayarlarBloku) ayarlarBloku.hidden = !canManage;
+      var patron = isPatron(session);
+      var canInvoices = !!(session && (session.canManageInvoices || patron));
+
+      document.querySelectorAll('.tab-patron').forEach(function (btn) {
+        btn.hidden = !patron;
+      });
+
+      document.querySelectorAll('.patron-only').forEach(function (el) {
+        el.hidden = !patron;
+      });
+
+      if (metaAyar) metaAyar.hidden = !patron;
       if (ayarEl) {
-        ayarEl.textContent = canManage ? 'Açık (patron)' : 'Kapalı (personel)';
+        ayarEl.textContent = patron ? 'Açık (patron)' : 'Kapalı (personel)';
+      }
+      if (formFatura) formFatura.hidden = !canInvoices;
+      if (hintFatura) {
+        hintFatura.textContent = canInvoices
+          ? 'Yeni fatura ekleyin. Tedarikçiyi listeden seçin.'
+          : 'Personel faturaları görüntüleyebilir; ekleme yalnız patron.';
+      }
+
+      // Personelde gizli sekmedeyse Özet’e dön
+      var active = document.querySelector('.tab.is-active');
+      if (active && active.hidden) {
+        switchTab('ozet');
       }
     }
 
@@ -183,7 +212,7 @@
           ? 'Tanımlı (test)'
           : 'Henüz yok (YOUR_SPREADSHEET_ID)';
       yazmaEl.textContent = bilgi.canWrite
-        ? 'Açık (patron/personel)'
+        ? 'Açık (gelir / gider / ödeme)'
         : 'Kapalı (misafir)';
       if (ayarEl) {
         ayarEl.textContent = bilgi.canManage
@@ -191,11 +220,15 @@
           : 'Kapalı (personel)';
       }
       metaEl.hidden = false;
-      applyRoleUi({
-        canManage: !!bilgi.canManage,
-        rol: bilgi.role,
-        ad: bilgi.userName
-      });
+      applyRoleUi(
+        bilgi.session || {
+          canManage: !!bilgi.canManage,
+          canManageInvoices: !!bilgi.canManageInvoices,
+          canManageSuppliers: !!bilgi.canManageSuppliers,
+          rol: bilgi.role,
+          ad: bilgi.userName
+        }
+      );
       gosterBorcOzeti(bilgi.summary);
     }
 
@@ -223,6 +256,8 @@
       if (name === 'ozet') loadOzet();
       if (name === 'gelir') loadGelir();
       if (name === 'gider') loadGider();
+      if (name === 'odeme') loadOdeme();
+      if (name === 'fatura') loadFatura();
       if (name === 'tedarikci') loadTedarikci();
     }
 
@@ -238,6 +273,7 @@
 
     tabs.forEach(function (btn) {
       btn.addEventListener('click', function () {
+        if (btn.hidden) return;
         switchTab(btn.getAttribute('data-tab'));
       });
     });
@@ -321,6 +357,66 @@
         .listExpense({});
     }
 
+    function loadOdeme() {
+      if (!hasGas()) return;
+      refreshSupplierOptions();
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.ok) {
+            setMsg('msg-odeme', (res && res.message) || 'Ödeme okunamadı.', false);
+            renderList('list-odeme', [], null);
+            return;
+          }
+          setMsg('msg-odeme', '', true);
+          renderList('list-odeme', res.rows, function (r) {
+            return (
+              '<strong>' + (r.tutar != null ? r.tutar : '—') + '</strong> · ' +
+              (r.tedarikci || '') +
+              '<div class="muted">' +
+              (r.tarih || '') +
+              (r.yontem ? ' · ' + r.yontem : '') +
+              '</div>'
+            );
+          });
+        })
+        .withFailureHandler(function () {
+          setMsg('msg-odeme', 'Ödeme listesi alınamadı.', false);
+        })
+        .listPayments({});
+    }
+
+    function loadFatura() {
+      if (!hasGas()) return;
+      refreshSupplierOptions();
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.ok) {
+            setMsg('msg-fatura', (res && res.message) || 'Fatura okunamadı.', false);
+            renderList('list-fatura', [], null);
+            return;
+          }
+          setMsg('msg-fatura', '', true);
+          renderList('list-fatura', res.rows, function (r) {
+            return (
+              '<strong>' +
+              (r.faturaNo || '') +
+              '</strong> · ' +
+              (r.tutar != null ? r.tutar : '—') +
+              '<div class="muted">' +
+              (r.tarih || '') +
+              ' · ' +
+              (r.tedarikci || '') +
+              (r.durum ? ' · ' + r.durum : '') +
+              '</div>'
+            );
+          });
+        })
+        .withFailureHandler(function () {
+          setMsg('msg-fatura', 'Fatura listesi alınamadı.', false);
+        })
+        .listInvoices({});
+    }
+
     function refreshSupplierOptions() {
       if (!hasGas()) return;
       google.script.run
@@ -335,6 +431,10 @@
 
     function loadTedarikci() {
       if (!hasGas()) return;
+      if (!isPatron(currentSession)) {
+        setMsg('msg-tedarikci', 'Tedarikçi yönetimi yalnız patron içindir.', false);
+        return;
+      }
       google.script.run
         .withSuccessHandler(function (res) {
           if (!res || !res.ok) {
@@ -417,6 +517,14 @@
           );
           return;
         }
+        if (!isPatron(currentSession)) {
+          setMsg(
+            'msg-tedarikci',
+            'Tedarikçi ekleme yalnız patron içindir.',
+            false
+          );
+          return;
+        }
         var kayit = formValues(formTed);
         google.script.run
           .withSuccessHandler(function (res) {
@@ -433,12 +541,15 @@
       });
     }
 
-    var formFatura = document.getElementById('form-fatura');
     if (formFatura) {
       formFatura.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!hasGas()) {
           setMsg('msg-fatura', 'Yalnızca Apps Script Web App içinde çalışır.', false);
+          return;
+        }
+        if (!isPatron(currentSession)) {
+          setMsg('msg-fatura', 'Fatura ekleme yalnız patron içindir.', false);
           return;
         }
         var kayit = formValues(formFatura);
@@ -451,7 +562,7 @@
             setMsg('msg-fatura', res.message || '', !!res.ok);
             if (res.ok) {
               formFatura.reset();
-              loadTedarikci();
+              loadFatura();
             }
           })
           .withFailureHandler(function () {
@@ -479,7 +590,7 @@
             setMsg('msg-odeme', res.message || '', !!res.ok);
             if (res.ok) {
               formOdeme.reset();
-              loadTedarikci();
+              loadOdeme();
             }
           })
           .withFailureHandler(function () {
@@ -522,7 +633,7 @@
             setMsg('msg-login', res.message || 'Giriş başarılı.', true);
             if (loginCode) loginCode.value = '';
             showApp(res.session);
-            loadOzet();
+            switchTab('ozet');
           })
           .withFailureHandler(function () {
             if (btnLogin) btnLogin.disabled = false;
@@ -557,7 +668,7 @@
       btnForgot.addEventListener('click', function () {
         setMsg(
           'msg-login',
-          'Test ortamı: kodlar Config.TEST_USERS içinde (ör. TEST1234). Canlı şifre yok.',
+          'Test ortamı: kodlar Config.TEST_USERS içinde (ör. Fatih TEST4567, Sercan TEST2345). Canlı şifre yok.',
           true
         );
       });
@@ -600,7 +711,7 @@
         .withSuccessHandler(function (res) {
           if (res && res.loggedIn && res.session) {
             showApp(res.session);
-            loadOzet();
+            switchTab('ozet');
           } else {
             showLogin();
           }

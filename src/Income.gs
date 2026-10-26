@@ -11,6 +11,7 @@
  * @return {{ok: boolean, message: string, duplicate?: boolean}}
  */
 function addIncome(kayit) {
+  // Gelir: patron veya personel (requirePersonelOrPatron).
   var denied = denyUnlessWriter();
   if (denied) {
     return denied;

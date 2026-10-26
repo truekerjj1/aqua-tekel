@@ -32,8 +32,9 @@ function showPanelOpenInstructions() {
       '   veya ilk kez: Deploy → New deployment → Web app\n' +
       '3) Execute as: Me · Who has access: Only myself\n' +
       '4) Açılan Web App linkine tıklayın.\n\n' +
-      'Beklenen ekran: Güvenli giriş + TEST MODU rozeti\n' +
-      'Test kod örneği: TEST1234 (Config.TEST_USERS)\n\n' +
+      'Beklenen: Güvenli giriş + TEST MODU + rol sekmeleri\n' +
+      'Test: Fatih TEST4567 (patron) · Sercan TEST2345 (personel)\n' +
+      'Tedarikçi yalnız patron; personel ödeme/gelir/gider yapar.\n\n' +
       'Ayrıntılı adımlar: PANEL-GUNCELLEME.md / PANEL-KURULUM.md',
     ui.ButtonSet.OK
   );

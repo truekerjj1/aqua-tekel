@@ -3,7 +3,7 @@
   <head>
     <base target="_top" />
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title><?= brandName ?></title>
     <?!= include('ui/Styles'); ?>
   </head>
@@ -20,16 +20,16 @@
         <p class="badge-test"><?= environmentLabel ?></p>
       </header>
 
-      <!-- Giriş ekranı -->
+      <!-- Giriş -->
       <div id="login-view" class="login-wrap">
-        <div class="login-card">
+        <div class="login-card anim-rise">
           <div class="login-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2zm-7-2a2 2 0 0 1 4 0v2h-4V6zm3 9.7a1.5 1.5 0 1 1-1-2.7 1.5 1.5 0 0 1 1 2.7z"/>
             </svg>
           </div>
           <h1 class="login-title">Güvenli giriş</h1>
-          <p class="login-lead">Yetkili kullanıcı bilgilerinizle işlem ekranına giriş yap.</p>
+          <p class="login-lead">Yetkili kullanıcı bilgilerinizle işlem ekranına giriş yapın.</p>
           <form class="form-login" id="form-login" autocomplete="off">
             <label>
               Kullanıcı
@@ -56,9 +56,9 @@
         </div>
       </div>
 
-      <!-- Ana panel (oturum sonrası) -->
+      <!-- Ana panel -->
       <div id="app-view" hidden>
-        <div class="app-toolbar">
+        <div class="app-toolbar anim-fade">
           <p class="user-chip">
             <strong id="chip-name">—</strong>
             <span class="role-pill" id="chip-role">—</span>
@@ -66,16 +66,34 @@
           <button type="button" class="btn-ghost" id="btn-logout">Çıkış</button>
         </div>
 
-        <nav class="tabs" role="tablist" aria-label="Panel sekmeleri">
+        <nav class="tabs" id="tab-nav" role="tablist" aria-label="Panel sekmeleri">
           <button type="button" class="tab is-active" data-tab="ozet" role="tab" aria-selected="true">Özet</button>
           <button type="button" class="tab" data-tab="gelir" role="tab" aria-selected="false">Gelir</button>
           <button type="button" class="tab" data-tab="gider" role="tab" aria-selected="false">Gider</button>
-          <button type="button" class="tab" data-tab="tedarikci" role="tab" aria-selected="false">Tedarikçi</button>
+          <button type="button" class="tab" data-tab="odeme" role="tab" aria-selected="false">Ödeme</button>
+          <button type="button" class="tab" data-tab="fatura" role="tab" aria-selected="false" data-role="any">Fatura</button>
+          <button type="button" class="tab tab-patron" data-tab="tedarikci" role="tab" aria-selected="false" hidden>Tedarikçi</button>
+          <button type="button" class="tab tab-patron" data-tab="ayarlar" role="tab" aria-selected="false" hidden>Ayarlar</button>
         </nav>
 
-        <main class="panel">
+        <main class="panel anim-fade">
+          <!-- Özet -->
           <section class="tab-panel is-active" id="panel-ozet" role="tabpanel">
             <p class="status" id="status">Yükleniyor…</p>
+            <div class="metric-row" id="summary-totals" hidden>
+              <div class="metric">
+                <span class="metric-label">Gelir</span>
+                <span class="metric-value" id="sum-gelir">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Gider</span>
+                <span class="metric-value" id="sum-gider">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Borç</span>
+                <span class="metric-value" id="sum-borc">—</span>
+              </div>
+            </div>
             <dl class="meta" id="meta" hidden>
               <div>
                 <dt>Rol</dt>
@@ -90,36 +108,23 @@
                 <dd id="sheet">—</dd>
               </div>
               <div>
-                <dt>Yazma</dt>
+                <dt>Günlük işlem</dt>
                 <dd id="yazma">—</dd>
               </div>
               <div class="patron-only" id="meta-ayar" hidden>
-                <dt>Ayar / silme</dt>
+                <dt>Ayar / tedarikçi</dt>
                 <dd id="ayar">—</dd>
-              </div>
-            </dl>
-            <dl class="meta summary-totals" id="summary-totals" hidden>
-              <div>
-                <dt>Gelir toplamı</dt>
-                <dd id="sum-gelir">—</dd>
-              </div>
-              <div>
-                <dt>Gider toplamı</dt>
-                <dd id="sum-gider">—</dd>
-              </div>
-              <div>
-                <dt>Tedarikçi borç toplamı</dt>
-                <dd id="sum-borc">—</dd>
               </div>
             </dl>
             <h2 class="section-title">Tedarikçi borçları</h2>
             <ul class="list debt-list" id="list-borc-ozet" hidden></ul>
-            <p class="hint">Sandbox özeti. Veri, bağlı test tablosundan okunur (YOUR_SPREADSHEET_ID gerekmez).</p>
+            <p class="hint">Sandbox özeti · aktif test tablosu (YOUR_SPREADSHEET_ID gerekmez).</p>
           </section>
 
+          <!-- Gelir -->
           <section class="tab-panel" id="panel-gelir" role="tabpanel" hidden>
-            <h2 class="section-title">Gelir</h2>
-            <p class="hint">Test kaydı eklemek için tarih, tutar ve açıklama girin.</p>
+            <h2 class="section-title">Gelir ekle</h2>
+            <p class="hint">Günlük satış / gelir kaydı. Patron ve personel ekleyebilir.</p>
             <form class="form" id="form-gelir">
               <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
               <label>Tutar <input name="tutar" type="text" inputmode="decimal" placeholder="100" required /></label>
@@ -128,12 +133,14 @@
               <button type="submit" class="btn">Gelir ekle</button>
             </form>
             <p class="form-msg" id="msg-gelir" hidden></p>
+            <h3 class="section-title section-title--sm">Son kayıtlar</h3>
             <ul class="list" id="list-gelir"></ul>
           </section>
 
+          <!-- Gider -->
           <section class="tab-panel" id="panel-gider" role="tabpanel" hidden>
-            <h2 class="section-title">Gider</h2>
-            <p class="hint">Tedarikçiyi listeden seçin (serbest yazı yok).</p>
+            <h2 class="section-title">Gider ekle</h2>
+            <p class="hint">Tedarikçiyi listeden seçin (yeni tedarikçi eklemek patron işidir).</p>
             <form class="form" id="form-gider">
               <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
               <label>Tutar <input name="tutar" type="text" inputmode="decimal" placeholder="50" required /></label>
@@ -147,39 +154,14 @@
               <button type="submit" class="btn">Gider ekle</button>
             </form>
             <p class="form-msg" id="msg-gider" hidden></p>
+            <h3 class="section-title section-title--sm">Son kayıtlar</h3>
             <ul class="list" id="list-gider"></ul>
           </section>
 
-          <section class="tab-panel" id="panel-tedarikci" role="tabpanel" hidden>
-            <h2 class="section-title">Tedarikçi borç listesi</h2>
-            <p class="hint">Kalan borç = Faturalar tutar toplamı − Ödemeler tutar toplamı.</p>
-            <ul class="list debt-list" id="list-tedarikci"></ul>
-
-            <h3 class="section-title">Yeni tedarikçi</h3>
-            <form class="form" id="form-tedarikci">
-              <label>Ad <input name="ad" type="text" required /></label>
-              <label>Telefon <input name="telefon" type="text" /></label>
-              <label>Not <input name="not" type="text" /></label>
-              <button type="submit" class="btn">Tedarikçi ekle</button>
-            </form>
-            <p class="form-msg" id="msg-tedarikci" hidden></p>
-
-            <h3 class="section-title">Fatura ekle</h3>
-            <form class="form" id="form-fatura">
-              <label>Fatura no <input name="faturaNo" type="text" required /></label>
-              <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
-              <label>
-                Tedarikçi
-                <select name="tedarikci" id="select-fatura-tedarikci" required>
-                  <option value="">Tedarikçi seçin</option>
-                </select>
-              </label>
-              <label>Tutar <input name="tutar" type="text" inputmode="decimal" required /></label>
-              <button type="submit" class="btn">Fatura ekle</button>
-            </form>
-            <p class="form-msg" id="msg-fatura" hidden></p>
-
-            <h3 class="section-title">Ödeme ekle</h3>
+          <!-- Ödeme -->
+          <section class="tab-panel" id="panel-odeme" role="tabpanel" hidden>
+            <h2 class="section-title">Ödeme ekle</h2>
+            <p class="hint">Mevcut tedarikçiden seçip ödeme yapın. Yeni tedarikçi kaydı oluşturmaz.</p>
             <form class="form" id="form-odeme">
               <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
               <label>
@@ -193,11 +175,66 @@
               <button type="submit" class="btn">Ödeme ekle</button>
             </form>
             <p class="form-msg" id="msg-odeme" hidden></p>
+            <h3 class="section-title section-title--sm">Son ödemeler</h3>
+            <ul class="list" id="list-odeme"></ul>
+          </section>
 
-            <div class="patron-only" id="ayarlar-bloku" hidden>
-              <h3 class="section-title">Ayarlar (yalnızca patron)</h3>
-              <p class="hint">Personelde silme / ayar yoktur. Bu blok yalnızca patron oturumunda görünür.</p>
-            </div>
+          <!-- Fatura -->
+          <section class="tab-panel" id="panel-fatura" role="tabpanel" hidden>
+            <h2 class="section-title">Faturalar</h2>
+            <p class="hint" id="hint-fatura">Patron fatura ekler. Personel yalnız listeler.</p>
+            <form class="form patron-only" id="form-fatura" hidden>
+              <label>Fatura no <input name="faturaNo" type="text" required /></label>
+              <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
+              <label>
+                Tedarikçi
+                <select name="tedarikci" id="select-fatura-tedarikci" required>
+                  <option value="">Tedarikçi seçin</option>
+                </select>
+              </label>
+              <label>Tutar <input name="tutar" type="text" inputmode="decimal" required /></label>
+              <button type="submit" class="btn">Fatura ekle</button>
+            </form>
+            <p class="form-msg" id="msg-fatura" hidden></p>
+            <h3 class="section-title section-title--sm">Kayıtlı faturalar</h3>
+            <ul class="list" id="list-fatura"></ul>
+          </section>
+
+          <!-- Tedarikçi (yalnız patron) -->
+          <section class="tab-panel" id="panel-tedarikci" role="tabpanel" hidden>
+            <h2 class="section-title">Tedarikçiler</h2>
+            <p class="hint">Tedarikçi ekleme ve düzenleme yalnız patron içindir.</p>
+            <ul class="list debt-list" id="list-tedarikci"></ul>
+
+            <h3 class="section-title section-title--sm">Yeni tedarikçi</h3>
+            <form class="form" id="form-tedarikci">
+              <label>Ad <input name="ad" type="text" required /></label>
+              <label>Telefon <input name="telefon" type="text" /></label>
+              <label>Not <input name="not" type="text" /></label>
+              <button type="submit" class="btn">Tedarikçi ekle</button>
+            </form>
+            <p class="form-msg" id="msg-tedarikci" hidden></p>
+          </section>
+
+          <!-- Ayarlar (yalnız patron) -->
+          <section class="tab-panel" id="panel-ayarlar" role="tabpanel" hidden>
+            <h2 class="section-title">Ayarlar</h2>
+            <p class="hint">Kullanıcı ve panel ayarları yalnız patron içindir. Personelde bu sekme yoktur.</p>
+            <dl class="meta" id="ayarlar-meta">
+              <div>
+                <dt>Ortam</dt>
+                <dd>TEST — canlı cariye işlenmez</dd>
+              </div>
+              <div>
+                <dt>Tablo</dt>
+                <dd>Aktif sandbox (SPREADSHEET_ID yer tutucu)</dd>
+              </div>
+              <div>
+                <dt>Yetki</dt>
+                <dd>Tedarikçi + fatura + ayar: patron · Günlük işlem: patron/personel</dd>
+              </div>
+            </dl>
+            <p class="hint">Test kullanıcıları <code>Config.TEST_USERS</code> içindedir; sheet’e kod yazılmaz.</p>
           </section>
         </main>
       </div>

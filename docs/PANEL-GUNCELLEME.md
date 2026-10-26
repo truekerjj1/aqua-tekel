@@ -1,4 +1,4 @@
-# Panel güncelleme — giriş ekranı (Windows)
+# Panel güncelleme — yetki + UI (Windows)
 
 Yalnızca **test**. Canlı muhasebe tablosuna bağlanmayın.  
 Tablo: **Aqua TEKEL TEST PROJESİ** → **Uzantılar → Apps Script**
@@ -8,20 +8,26 @@ GitHub’da dosyaya tıklayın → **Raw** → tümünü kopyala → Apps Script
 
 ---
 
-## Yeniden yapıştırılacaklar (kısa sıra)
+## Yeniden yapıştırılacaklar (sıra)
 
 | # | Apps Script adı | GitHub dosyası |
 |---|-----------------|----------------|
 | 1 | `Config` | `src/Config.gs` |
 | 2 | `Auth` | `src/Auth.gs` |
 | 3 | `Utils` | `src/Utils.gs` |
-| 4 | `Main` | `src/Main.gs` |
-| 5 | `SampleData` | `src/SampleData.gs` |
-| 6 | `ui/Styles` | `ui/Styles.html` |
-| 7 | `ui/Index` | `ui/Index.html` |
-| 8 | `ui/Client` | `ui/Client.html` |
+| 4 | `Income` | `src/Income.gs` |
+| 5 | `Expense` | `src/Expense.gs` |
+| 6 | `Payments` | `src/Payments.gs` |
+| 7 | `Suppliers` | `src/Suppliers.gs` |
+| 8 | `Invoices` | `src/Invoices.gs` |
+| 9 | `Main` | `src/Main.gs` |
+| 10 | `ui/Styles` | `ui/Styles.html` |
+| 11 | `ui/Index` | `ui/Index.html` |
+| 12 | `ui/Client` | `ui/Client.html` |
 
 `ui/...` adını **tam böyle** yazın (eğik çizgi dahil). HTML yoksa: **+ → HTML**.
+
+`Config` değişmediyse bile Auth ile birlikte kontrol edin (`TEST_USERS` aynı kalır).
 
 ---
 
@@ -32,19 +38,32 @@ GitHub’da dosyaya tıklayın → **Raw** → tümünü kopyala → Apps Script
    (veya ilk kez: New deployment → Web app · **Me** · **Only myself**)
 3. Web App linkini açın
 
-**Beklenen:** açık yeşil giriş · **AQUA TEKEL** · **TEST MODU** rozeti · kullanıcı seç · kod · **Giriş Yap**
+**Beklenen:** açık yeşil mobil panel · **AQUA TEKEL** · **TEST MODU** · giriş · rolüne göre sekmeler
+
+---
+
+## Yetki (kısa)
+
+| | Patron | Personel |
+|--|--------|----------|
+| Gelir / Gider / Ödeme | evet | evet |
+| Fatura ekle | evet | hayır (liste OK) |
+| Tedarikçi sekmesi | evet | **yok** |
+| Ayarlar | evet | **yok** |
+
+Sunucu da kontrol eder (`requirePatron` / `requirePersonelOrPatron`). UI gizlemek yetmez.
 
 ---
 
 ## Test kodları (sandbox — canlı değil)
 
-`Config.TEST_USERS` içinde (örnek):
+`Config.TEST_USERS`:
 
-| Kullanıcı | Rol | Kod (test only) |
-|-----------|-----|-----------------|
+| Kullanıcı | Rol | Kod |
+|-----------|-----|-----|
 | Yalçın Özeke | patron | `TEST1234` |
 | Sercan Toprak | personel | `TEST2345` |
 | Aleyna Toprak | personel | `TEST3456` |
 | Fatih Toprak | patron | `TEST4567` |
 
-Personelde silme / ayar yoktur. `SPREADSHEET_ID` yer tutucu kalsın; aktif tablo kullanılır.
+`SPREADSHEET_ID` yer tutucu kalsın; aktif tablo kullanılır. Canlı muhasebeye bağlanmayın.

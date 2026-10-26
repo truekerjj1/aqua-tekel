@@ -4,10 +4,19 @@
  * Config.TEST_USERS ile giriş (kullanıcı seç + kişisel erişim kodu).
  * Config.PATRON_EMAILS / PERSONEL_EMAILS yedek (Google e-posta).
  *
- * Patron: tam yazma + ayar / silme
- * Personel: gelir / gider / tedarikçi / fatura / ödeme yazabilir; silme / ayar yok
- * Misafir: salt okuma / giriş yok
+ * Yetki matrisi (sunucu tarafı da zorunlu — yalnız UI gizleme yetmez):
+ * | Özellik              | Patron | Personel |
+ * |----------------------|--------|----------|
+ * | Özet                 | evet   | evet     |
+ * | Gelir ekle/liste     | evet   | evet     |
+ * | Gider ekle/liste     | evet   | evet     |
+ * | Ödeme ekle (dropdown)| evet   | evet     |
+ * | Fatura ekle          | evet   | hayır (liste görüntüleyebilir) |
+ * | Tedarikçi ekle/düzenle / sekme | evet | hayır |
+ * | Ayarlar / kullanıcı  | evet   | hayır    |
+ * | Çıkış                | evet   | evet     |
  *
+ * requirePatron / requirePersonelOrPatron / deny* yardımcıları API’lerde kullanılır.
  * Erişim kodları test only — canlı şifre değildir.
  */
 
@@ -190,18 +199,26 @@ function logout() {
 }
 
 /**
- * İstemciye güvenli oturum özeti (kod yok).
+ * İstemciye güvenli oturum özeti (kod yok) + yetki bayrakları.
  * @param {{id: string, ad: string, rol: string}} session
  * @return {Object}
  */
 function buildPublicSession_(session) {
   var rol = session.rol || ROLLER.MISAFIR;
+  var isPatron = rol === ROLLER.PATRON;
+  var isStaff = rol === ROLLER.PERSONEL || isPatron;
   return {
     id: session.id,
     ad: session.ad,
     rol: rol,
-    canWrite: rol === ROLLER.PATRON || rol === ROLLER.PERSONEL,
-    canManage: rol === ROLLER.PATRON
+    /** Günlük işlem: gelir / gider / ödeme */
+    canWrite: isStaff,
+    /** Tedarikçi ekle / düzenle / sekme — yalnız patron */
+    canManageSuppliers: isPatron,
+    /** Fatura ekle / düzenle — yalnız patron (personel listeleyebilir) */
+    canManageInvoices: isPatron,
+    /** Ayarlar / kullanıcı / silme — yalnız patron */
+    canManage: isPatron
   };
 }
 
@@ -298,7 +315,7 @@ function hasRole(requiredRole, email) {
 }
 
 /**
- * İşlem öncesi yetki kontrolü.
+ * İşlem öncesi yetki kontrolü (boolean).
  * @param {string} requiredRole
  * @param {string=} email
  * @return {boolean}
@@ -308,12 +325,49 @@ function requireRole(requiredRole, email) {
 }
 
 /**
- * Gelir / gider / tedarikçi / fatura / ödeme yazabilir mi? (patron veya personel)
+ * Yalnızca patron. API’lerde kullanın.
+ * @param {string=} email
+ * @return {boolean}
+ */
+function requirePatron(email) {
+  return hasRole(ROLLER.PATRON, email);
+}
+
+/**
+ * Personel veya patron (günlük işlemler).
+ * @param {string=} email
+ * @return {boolean}
+ */
+function requirePersonelOrPatron(email) {
+  return hasRole(ROLLER.PERSONEL, email);
+}
+
+/**
+ * Gelir / gider / ödeme yazabilir mi? (patron veya personel)
+ * Tedarikçi / fatura yazma ayrı — canManageSuppliers / canManageInvoices.
  * @param {string=} email
  * @return {boolean}
  */
 function canWriteRecords(email) {
-  return hasRole(ROLLER.PERSONEL, email);
+  return requirePersonelOrPatron(email);
+}
+
+/**
+ * Tedarikçi ekle / düzenle — yalnız patron.
+ * @param {string=} email
+ * @return {boolean}
+ */
+function canManageSuppliers(email) {
+  return requirePatron(email);
+}
+
+/**
+ * Fatura ekle / düzenle — yalnız patron.
+ * @param {string=} email
+ * @return {boolean}
+ */
+function canManageInvoices(email) {
+  return requirePatron(email);
 }
 
 /**
@@ -322,15 +376,15 @@ function canWriteRecords(email) {
  * @return {boolean}
  */
 function canManageSettings(email) {
-  return hasRole(ROLLER.PATRON, email);
+  return requirePatron(email);
 }
 
 /**
- * Yazma yetkisi yoksa Türkçe sonuç nesnesi.
+ * Yazma yetkisi yoksa Türkçe sonuç nesnesi (gelir/gider/ödeme).
  * @return {{ok: boolean, message: string}|null} null = yetki var
  */
 function denyUnlessWriter() {
-  if (canWriteRecords()) {
+  if (requirePersonelOrPatron()) {
     return null;
   }
   var role = getUserRole();
@@ -348,15 +402,59 @@ function denyUnlessWriter() {
 }
 
 /**
+ * Tedarikçi ekleme / düzenleme — yalnız patron (sunucu tarafı).
+ * @return {{ok: boolean, message: string}|null} null = yetki var
+ */
+function denyUnlessSupplierManager() {
+  if (requirePatron()) {
+    return null;
+  }
+  var role = getUserRole();
+  if (role === ROLLER.MISAFIR) {
+    return {
+      ok: false,
+      message:
+        'Tedarikçi yönetimi için giriş yapın. Tedarikçiyi yalnız patron ekler / düzenler.'
+    };
+  }
+  return {
+    ok: false,
+    message:
+      'Tedarikçi ekleme / düzenleme yalnız patron içindir. Personel ödeme yapabilir ama tedarikçi kaydı oluşturamaz.'
+  };
+}
+
+/**
+ * Fatura ekleme / düzenleme — yalnız patron.
+ * @return {{ok: boolean, message: string}|null} null = yetki var
+ */
+function denyUnlessInvoiceManager() {
+  if (requirePatron()) {
+    return null;
+  }
+  var role = getUserRole();
+  if (role === ROLLER.MISAFIR) {
+    return {
+      ok: false,
+      message: 'Fatura eklemek için giriş yapın. Faturaları yalnız patron ekler.'
+    };
+  }
+  return {
+    ok: false,
+    message: 'Fatura ekleme / düzenleme yalnız patron içindir. Personel faturaları görüntüleyebilir.'
+  };
+}
+
+/**
  * Silme / ayar yalnızca patron.
  * @return {{ok: boolean, message: string}|null} null = yetki var
  */
 function denyUnlessManager() {
-  if (canManageSettings()) {
+  if (requirePatron()) {
     return null;
   }
   return {
     ok: false,
-    message: 'Bu işlem yalnızca patron içindir. Personelde silme / ayar yok.'
+    message: 'Bu işlem yalnızca patron içindir. Personelde ayar / kullanıcı yönetimi yok.'
   };
 }
