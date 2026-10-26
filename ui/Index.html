@@ -318,8 +318,30 @@
                   <option value="">Tümü</option>
                 </select>
               </label>
-              <label>Başlangıç <input name="baslangic" type="text" placeholder="01.10.2026" /></label>
-              <label>Bitiş <input name="bitis" type="text" placeholder="31.10.2026" /></label>
+              <div class="date-range-pickers" role="group" aria-label="Tarih aralığı">
+                <div class="date-picker" data-admin-date="baslangic">
+                  <span class="date-picker-label">Başlangıç</span>
+                  <p class="date-picker-value is-empty" id="admin-baslangic-display" aria-live="polite">
+                    Tarih seçin
+                  </p>
+                  <input type="hidden" name="baslangic" id="admin-baslangic" value="" />
+                  <div class="date-cal" id="admin-cal-baslangic" aria-label="Başlangıç takvimi"></div>
+                  <button type="button" class="btn-ghost date-picker-clear" data-clear="baslangic" hidden>
+                    Temizle
+                  </button>
+                </div>
+                <div class="date-picker" data-admin-date="bitis">
+                  <span class="date-picker-label">Bitiş</span>
+                  <p class="date-picker-value is-empty" id="admin-bitis-display" aria-live="polite">
+                    Tarih seçin
+                  </p>
+                  <input type="hidden" name="bitis" id="admin-bitis" value="" />
+                  <div class="date-cal" id="admin-cal-bitis" aria-label="Bitiş takvimi"></div>
+                  <button type="button" class="btn-ghost date-picker-clear" data-clear="bitis" hidden>
+                    Temizle
+                  </button>
+                </div>
+              </div>
               <button type="submit" class="btn">Filtrele</button>
             </form>
             <p class="form-msg" id="msg-admin-filtre" hidden></p>
