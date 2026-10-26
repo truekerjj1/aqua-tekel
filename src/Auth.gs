@@ -12,8 +12,10 @@
  * | Gider ekle/liste     | evet   | evet     |
  * | Ödeme ekle (dropdown)| evet   | evet     |
  * | Fatura ekle          | evet   | evet     |
- * | Tedarikçi ekle/düzenle / sekme | evet | hayır |
+ * | Tedarikçi ekle/düzenle/sil | evet | hayır |
+ * | Yönetici paneli / onay | evet | hayır (kuyruk kendi) |
  * | Ayarlar / kullanıcı  | evet   | hayır    |
+ * | Profil (son işlemler)| evet   | evet     |
  * | Çıkış                | evet   | evet     |
  *
  * requirePatron / requirePersonelOrPatron / deny* yardımcıları API’lerde kullanılır.
@@ -113,19 +115,24 @@ function clearSessionUser_() {
 }
 
 /**
- * Config.TEST_USERS içinden id ile kullanıcı bulur.
+ * Kullanıcı bulur: Kullanicilar sheet + Config.TEST_USERS.
  * @param {string} userId
  * @return {Object|null}
  */
 function findTestUserById_(userId) {
-  var list = getConfig().TEST_USERS || [];
-  var id = String(userId || '').trim();
-  for (var i = 0; i < list.length; i++) {
-    if (String(list[i].id) === id) {
-      return list[i];
+  try {
+    return findUserById(userId);
+  } catch (e) {
+    // Users.gs yoksa Config fallback
+    var list = getConfig().TEST_USERS || [];
+    var id = String(userId || '').trim();
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].id) === id) {
+        return list[i];
+      }
     }
+    return null;
   }
-  return null;
 }
 
 /**
@@ -134,20 +141,16 @@ function findTestUserById_(userId) {
  * @return {{ok: boolean, message: string, users: Array<{id: string, ad: string}>}}
  */
 function listUsersForLogin() {
-  var list = getConfig().TEST_USERS || [];
-  var users = [];
-  for (var i = 0; i < list.length; i++) {
-    var u = list[i];
-    users.push({
-      id: u.id,
-      ad: u.ad
-    });
+  try {
+    return listActiveUsersForLogin();
+  } catch (e) {
+    var list = getConfig().TEST_USERS || [];
+    var users = [];
+    for (var i = 0; i < list.length; i++) {
+      users.push({ id: list[i].id, ad: list[i].ad });
+    }
+    return { ok: true, message: 'Tamam', users: users };
   }
-  return {
-    ok: true,
-    message: 'Tamam',
-    users: users
-  };
 }
 
 /**
@@ -245,7 +248,7 @@ function getSession() {
       message: 'Oturum yok.'
     };
   }
-  // Kullanıcı Config’ten silindiyse oturumu düşür
+  // Kullanıcı silindi / pasifse oturumu düşür
   var user = findTestUserById_(sess.id);
   if (!user) {
     clearSessionUser_();

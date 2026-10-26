@@ -14,27 +14,37 @@
 var TEST_SAYFALARI = [
   {
     ad: 'Gelir',
-    basliklar: ['Tarih', 'Tutar', 'Açıklama', 'Kategori', 'Kaynak', 'Not']
+    basliklar: ['Tarih', 'Tutar', 'Açıklama', 'Kategori', 'Kaynak', 'Not', 'Kullanici']
   },
   {
     ad: 'Gider',
-    basliklar: ['Tarih', 'Tutar', 'Açıklama', 'Kategori', 'Not']
+    basliklar: ['Tarih', 'Tutar', 'Açıklama', 'Kategori', 'Not', 'Kullanici']
   },
   {
     ad: 'Tedarikçiler',
-    basliklar: ['Ad', 'Telefon', 'Not', 'KalanBorc']
+    basliklar: ['Ad', 'Telefon', 'Not', 'KalanBorc', 'Aktif']
   },
   {
     ad: 'Faturalar',
-    basliklar: ['FaturaNo', 'Tarih', 'Tedarikçi', 'Tutar', 'Vade', 'Durum', 'Not']
+    basliklar: [
+      'FaturaNo', 'Tarih', 'Tedarikçi', 'Tutar', 'Vade', 'Durum', 'Not',
+      'Yöntem', 'Kullanici', 'OnayDurum', 'DekontFileId', 'DekontUrl'
+    ]
   },
   {
     ad: 'Odemeler',
-    basliklar: ['Tarih', 'Tedarikçi', 'Tutar', 'Yöntem', 'FaturaNo', 'Not']
+    basliklar: [
+      'Tarih', 'Tedarikçi', 'Tutar', 'Yöntem', 'FaturaNo', 'Not',
+      'Kullanici', 'OnayDurum', 'DekontFileId', 'DekontUrl'
+    ]
   },
   {
     ad: 'Kullanicilar',
-    basliklar: ['E-posta', 'Rol', 'Ad', 'Aktif']
+    basliklar: ['Id', 'E-posta', 'Rol', 'Ad', 'Aktif', 'Kod']
+  },
+  {
+    ad: 'Onaylar',
+    basliklar: ['Id', 'Tip', 'RefId', 'Kullanici', 'Tarih', 'Durum', 'Ozet']
   }
 ];
 

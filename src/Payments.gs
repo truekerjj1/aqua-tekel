@@ -3,12 +3,15 @@
  *
  * Aktif tabloya yazar: SpreadsheetApp.getActiveSpreadsheet().
  * YOUR_SPREADSHEET_ID zorunlu değildir; canlı ID kullanılmaz.
+ *
+ * Yöntem: Nakit | Kredi kartı | Vadeli
+ * Nakit/KK → gerçek ödeme (borç azalır). Vadeli → kayıt; borç düşmez.
  */
 
 /**
  * Yeni ödeme kaydı ekler.
- * @param {Object} kayit — {tarih, tedarikci, tutar, yontem, faturaNo, not}
- * @return {{ok: boolean, message: string}}
+ * @param {Object} kayit — {tarih, tedarikci, tutar, yontem, faturaNo, not, dekontFileId, dekontUrl}
+ * @return {{ok: boolean, message: string, row?: number, onayDurum?: string}}
  */
 function addPayment(kayit) {
   // Ödeme: patron veya personel — tedarikçiyi listeden seçer, kayıt oluşturmaz.
@@ -20,11 +23,20 @@ function addPayment(kayit) {
   kayit = kayit || {};
   var tedarikci = String(kayit.tedarikci || '').trim();
   var tutar = parseTutar(kayit.tutar);
+  var yontem = normalizeOdemeYontemi(kayit.yontem);
 
   if (!kayit.tarih || !tedarikci || isNaN(tutar)) {
     return {
       ok: false,
       message: 'Ödeme için tarih, tedarikçi ve tutar gerekli.'
+    };
+  }
+
+  var methods = getConfig().ODEME_YONTEMLERI || [];
+  if (methods.length && methods.indexOf(yontem) < 0) {
+    return {
+      ok: false,
+      message: 'Ödeme yöntemi: Nakit, Kredi kartı veya Vadeli seçin.'
     };
   }
 
@@ -34,18 +46,48 @@ function addPayment(kayit) {
     return { ok: false, message: got.message };
   }
 
+  var onayDurum = initialApprovalStatus_();
+  var kullanici = currentActorLabel_();
+  var dekontFileId = kayit.dekontFileId || '';
+  var dekontUrl = kayit.dekontUrl || '';
+
   got.sheet.appendRow([
     kayit.tarih,
     tedarikci,
     tutar,
-    kayit.yontem || '',
+    yontem,
     kayit.faturaNo || '',
-    kayit.not || ''
+    kayit.not || '',
+    kullanici,
+    onayDurum,
+    dekontFileId,
+    dekontUrl
   ]);
 
+  var rowNum = got.sheet.getLastRow();
+
+  // Vadeli: borç düşmez (computeSupplierBalance zaten Vadeli’yi saymaz)
   refreshSupplierBalances(tedarikci);
 
-  return { ok: true, message: 'Ödeme kaydı eklendi.' };
+  var ozet =
+    yontem + ' · ' + tedarikci + ' · ' + tutar +
+    (yontem === 'Vadeli' ? ' (vadeli — borç düşmez)' : '');
+  createApproval('odeme', rowNum, ozet, onayDurum);
+
+  var msg = 'Ödeme kaydı eklendi.';
+  if (yontem === 'Vadeli') {
+    msg += ' Vadeli: cari işlem kaydı; kalan borçtan düşülmez.';
+  }
+  if (onayDurum === cfg.ONAY_DURUM.BEKLIYOR) {
+    msg += ' Onay bekliyor.';
+  }
+
+  return {
+    ok: true,
+    message: msg,
+    row: rowNum,
+    onayDurum: onayDurum
+  };
 }
 
 /**
@@ -72,7 +114,11 @@ function listPayments(filtre) {
       tutar: r[2],
       yontem: r[3],
       faturaNo: r[4],
-      not: r[5]
+      not: r[5],
+      kullanici: r.length > 6 ? r[6] : '',
+      onayDurum: r.length > 7 ? r[7] : '',
+      dekontFileId: r.length > 8 ? r[8] : '',
+      dekontUrl: r.length > 9 ? r[9] : ''
     };
     if (filtre.tedarikci &&
         normalizeKeyPart(obj.tedarikci) !== normalizeKeyPart(filtre.tedarikci)) {
@@ -115,15 +161,23 @@ function updatePayment(id, kayit) {
     return { ok: false, message: 'Ödeme satırı bulunamadı.' };
   }
 
-  var existing = got.sheet.getRange(rowNum, 1, rowNum, 6).getValues()[0];
+  var existing = got.sheet.getRange(rowNum, 1, rowNum, 10).getValues()[0];
   var tarih = kayit.tarih !== undefined ? kayit.tarih : existing[0];
   var tedarikci = kayit.tedarikci !== undefined
     ? String(kayit.tedarikci).trim()
     : existing[1];
   var tutar = kayit.tutar !== undefined ? parseTutar(kayit.tutar) : existing[2];
-  var yontem = kayit.yontem !== undefined ? kayit.yontem : existing[3];
+  var yontem = kayit.yontem !== undefined
+    ? normalizeOdemeYontemi(kayit.yontem)
+    : existing[3];
   var faturaNo = kayit.faturaNo !== undefined ? kayit.faturaNo : existing[4];
   var not = kayit.not !== undefined ? kayit.not : existing[5];
+  var kullanici = kayit.kullanici !== undefined ? kayit.kullanici : existing[6];
+  var onayDurum = kayit.onayDurum !== undefined ? kayit.onayDurum : existing[7];
+  var dekontFileId = kayit.dekontFileId !== undefined
+    ? kayit.dekontFileId
+    : existing[8];
+  var dekontUrl = kayit.dekontUrl !== undefined ? kayit.dekontUrl : existing[9];
 
   if (!tedarikci) {
     return { ok: false, message: 'Tedarikçi boş olamaz.' };
@@ -132,8 +186,9 @@ function updatePayment(id, kayit) {
     return { ok: false, message: 'Geçersiz tutar.' };
   }
 
-  got.sheet.getRange(rowNum, 1, rowNum, 6).setValues([[
-    tarih, tedarikci, parseTutar(tutar), yontem, faturaNo, not
+  got.sheet.getRange(rowNum, 1, rowNum, 10).setValues([[
+    tarih, tedarikci, parseTutar(tutar), yontem, faturaNo, not,
+    kullanici, onayDurum, dekontFileId, dekontUrl
   ]]);
 
   refreshSupplierBalances(tedarikci);
