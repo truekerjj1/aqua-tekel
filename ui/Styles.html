@@ -754,6 +754,185 @@
     font-weight: 700;
   }
 
+  /* —— Yönetici tarih takvim tablosu —— */
+  .date-range-pickers {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  @media (min-width: 640px) {
+    .date-range-pickers {
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+  }
+
+  .date-picker {
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.75rem 0.7rem 0.65rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 0.55rem;
+  }
+
+  .date-picker-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #c8c8c8;
+  }
+
+  .date-picker-value {
+    margin: 0;
+    min-height: 1.35rem;
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--yellow);
+  }
+
+  .date-picker-value.is-empty {
+    font-family: var(--font);
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--muted);
+  }
+
+  .date-cal {
+    width: 100%;
+  }
+
+  .date-cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .date-cal-title {
+    flex: 1;
+    margin: 0;
+    text-align: center;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-strong);
+    text-transform: capitalize;
+  }
+
+  .date-cal-nav-btn {
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--yellow);
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+    cursor: pointer;
+    transition: border-color 0.18s var(--ease), background 0.18s var(--ease);
+  }
+
+  .date-cal-nav-btn:hover,
+  .date-cal-nav-btn:focus-visible {
+    border-color: var(--yellow);
+    background: var(--yellow-soft);
+    outline: none;
+  }
+
+  .date-cal-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .date-cal-table th {
+    padding: 0.28rem 0;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--surface-line);
+  }
+
+  .date-cal-table td {
+    padding: 0.12rem;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .date-cal-day {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1;
+    max-height: 2.35rem;
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0.35rem;
+    cursor: pointer;
+    transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+  }
+
+  .date-cal-day:hover,
+  .date-cal-day:focus-visible {
+    border-color: var(--yellow-deep);
+    background: var(--yellow-soft);
+    color: var(--yellow);
+    outline: none;
+  }
+
+  .date-cal-day.is-outside {
+    color: #555;
+    cursor: default;
+  }
+
+  .date-cal-day.is-outside:hover,
+  .date-cal-day.is-outside:focus-visible {
+    border-color: transparent;
+    background: transparent;
+    color: #555;
+  }
+
+  .date-cal-day.is-today:not(.is-selected) {
+    border-color: var(--border);
+    color: var(--yellow);
+  }
+
+  .date-cal-day.is-selected {
+    color: #0a0a0a;
+    background: var(--yellow);
+    border-color: var(--yellow);
+    font-weight: 700;
+  }
+
+  .date-cal-day.is-selected:hover,
+  .date-cal-day.is-selected:focus-visible {
+    color: #0a0a0a;
+    background: #ffe066;
+    border-color: #ffe066;
+  }
+
+  .date-picker-clear {
+    justify-self: start;
+    margin-top: 0;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.75rem;
+  }
+
   /* —— Motion —— */
   @keyframes rise-in {
     from {

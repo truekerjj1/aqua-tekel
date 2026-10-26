@@ -1078,6 +1078,280 @@
       });
     }
 
+    var TR_AYLAR = [
+      'Ocak',
+      'Şubat',
+      'Mart',
+      'Nisan',
+      'Mayıs',
+      'Haziran',
+      'Temmuz',
+      'Ağustos',
+      'Eylül',
+      'Ekim',
+      'Kasım',
+      'Aralık'
+    ];
+    var TR_GUNLER = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+
+    function pad2(n) {
+      return (n < 10 ? '0' : '') + n;
+    }
+
+    function parseTrDate(s) {
+      var m = String(s || '').trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+      if (!m) return null;
+      var d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+      if (
+        d.getFullYear() !== Number(m[3]) ||
+        d.getMonth() !== Number(m[2]) - 1 ||
+        d.getDate() !== Number(m[1])
+      ) {
+        return null;
+      }
+      return d;
+    }
+
+    function mondayIndex(jsDay) {
+      return jsDay === 0 ? 6 : jsDay - 1;
+    }
+
+    var adminDatePickers = {
+      baslangic: {
+        viewYear: new Date().getFullYear(),
+        viewMonth: new Date().getMonth(),
+        value: '',
+        calId: 'admin-cal-baslangic',
+        inputId: 'admin-baslangic',
+        displayId: 'admin-baslangic-display'
+      },
+      bitis: {
+        viewYear: new Date().getFullYear(),
+        viewMonth: new Date().getMonth(),
+        value: '',
+        calId: 'admin-cal-bitis',
+        inputId: 'admin-bitis',
+        displayId: 'admin-bitis-display'
+      }
+    };
+
+    function syncAdminDateDisplay(key) {
+      var state = adminDatePickers[key];
+      if (!state) return;
+      var input = document.getElementById(state.inputId);
+      var display = document.getElementById(state.displayId);
+      var clearBtn = document.querySelector(
+        '.date-picker-clear[data-clear="' + key + '"]'
+      );
+      if (input) input.value = state.value || '';
+      if (display) {
+        if (state.value) {
+          display.textContent = state.value;
+          display.classList.remove('is-empty');
+        } else {
+          display.textContent = 'Tarih seçin';
+          display.classList.add('is-empty');
+        }
+      }
+      if (clearBtn) clearBtn.hidden = !state.value;
+    }
+
+    function renderAdminCalendar(key) {
+      var state = adminDatePickers[key];
+      var root = document.getElementById(state.calId);
+      if (!root || !state) return;
+
+      var y = state.viewYear;
+      var m = state.viewMonth;
+      var selected = parseTrDate(state.value);
+      var today = new Date();
+      var first = new Date(y, m, 1);
+      var startPad = mondayIndex(first.getDay());
+      var daysInMonth = new Date(y, m + 1, 0).getDate();
+      var prevDays = new Date(y, m, 0).getDate();
+
+      var html =
+        '<div class="date-cal-nav">' +
+        '<button type="button" class="date-cal-nav-btn" data-nav="prev" aria-label="Önceki ay">‹</button>' +
+        '<p class="date-cal-title">' +
+        escapeText(TR_AYLAR[m] + ' ' + y) +
+        '</p>' +
+        '<button type="button" class="date-cal-nav-btn" data-nav="next" aria-label="Sonraki ay">›</button>' +
+        '</div>' +
+        '<table class="date-cal-table" role="grid">' +
+        '<thead><tr>';
+      var di;
+      for (di = 0; di < TR_GUNLER.length; di++) {
+        html += '<th scope="col">' + TR_GUNLER[di] + '</th>';
+      }
+      html += '</tr></thead><tbody>';
+
+      var cell = 0;
+      var dayNum = 1;
+      var nextDay = 1;
+      var week;
+      var dow;
+      for (week = 0; week < 6; week++) {
+        html += '<tr>';
+        for (dow = 0; dow < 7; dow++) {
+          var label;
+          var isoDay;
+          var isoMonth;
+          var isoYear;
+          var classes = 'date-cal-day';
+          var disabled = false;
+
+          if (cell < startPad) {
+            label = prevDays - startPad + cell + 1;
+            isoMonth = m === 0 ? 11 : m - 1;
+            isoYear = m === 0 ? y - 1 : y;
+            isoDay = label;
+            classes += ' is-outside';
+            disabled = true;
+          } else if (dayNum > daysInMonth) {
+            label = nextDay++;
+            isoMonth = m === 11 ? 0 : m + 1;
+            isoYear = m === 11 ? y + 1 : y;
+            isoDay = label;
+            classes += ' is-outside';
+            disabled = true;
+          } else {
+            label = dayNum;
+            isoDay = dayNum;
+            isoMonth = m;
+            isoYear = y;
+            if (
+              today.getFullYear() === y &&
+              today.getMonth() === m &&
+              today.getDate() === dayNum
+            ) {
+              classes += ' is-today';
+            }
+            if (
+              selected &&
+              selected.getFullYear() === y &&
+              selected.getMonth() === m &&
+              selected.getDate() === dayNum
+            ) {
+              classes += ' is-selected';
+            }
+            dayNum++;
+          }
+
+          var valueStr =
+            pad2(isoDay) + '.' + pad2(isoMonth + 1) + '.' + isoYear;
+          html += '<td>';
+          if (disabled) {
+            html +=
+              '<span class="' +
+              classes +
+              '" aria-hidden="true">' +
+              label +
+              '</span>';
+          } else {
+            html +=
+              '<button type="button" class="' +
+              classes +
+              '" data-date="' +
+              valueStr +
+              '" aria-label="' +
+              escapeText(valueStr) +
+              '"' +
+              (classes.indexOf('is-selected') >= 0
+                ? ' aria-pressed="true"'
+                : ' aria-pressed="false"') +
+              '>' +
+              label +
+              '</button>';
+          }
+          html += '</td>';
+          cell++;
+        }
+        html += '</tr>';
+        if (dayNum > daysInMonth && week >= 3) break;
+      }
+      html += '</tbody></table>';
+      root.innerHTML = html;
+    }
+
+    function setAdminDateValue(key, valueStr) {
+      var state = adminDatePickers[key];
+      if (!state) return;
+      state.value = valueStr || '';
+      if (valueStr) {
+        var d = parseTrDate(valueStr);
+        if (d) {
+          state.viewYear = d.getFullYear();
+          state.viewMonth = d.getMonth();
+        }
+      }
+      syncAdminDateDisplay(key);
+      renderAdminCalendar(key);
+    }
+
+    function initAdminDatePickers() {
+      var key;
+      for (key in adminDatePickers) {
+        if (!adminDatePickers.hasOwnProperty(key)) continue;
+        syncAdminDateDisplay(key);
+        renderAdminCalendar(key);
+      }
+
+      var form = document.getElementById('form-admin-filtre');
+      if (!form || form.getAttribute('data-date-bound') === '1') return;
+      form.setAttribute('data-date-bound', '1');
+
+      form.addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+
+        var clearBtn = t.closest('.date-picker-clear');
+        if (clearBtn) {
+          e.preventDefault();
+          setAdminDateValue(clearBtn.getAttribute('data-clear'), '');
+          return;
+        }
+
+        var navBtn = t.closest('.date-cal-nav-btn');
+        if (navBtn) {
+          e.preventDefault();
+          var picker = navBtn.closest('[data-admin-date]');
+          if (!picker) return;
+          var navKey = picker.getAttribute('data-admin-date');
+          var navState = adminDatePickers[navKey];
+          if (!navState) return;
+          if (navBtn.getAttribute('data-nav') === 'prev') {
+            navState.viewMonth -= 1;
+            if (navState.viewMonth < 0) {
+              navState.viewMonth = 11;
+              navState.viewYear -= 1;
+            }
+          } else {
+            navState.viewMonth += 1;
+            if (navState.viewMonth > 11) {
+              navState.viewMonth = 0;
+              navState.viewYear += 1;
+            }
+          }
+          renderAdminCalendar(navKey);
+          return;
+        }
+
+        var dayBtn = t.closest('.date-cal-day[data-date]');
+        if (dayBtn) {
+          e.preventDefault();
+          var dayPicker = dayBtn.closest('[data-admin-date]');
+          if (!dayPicker) return;
+          setAdminDateValue(
+            dayPicker.getAttribute('data-admin-date'),
+            dayBtn.getAttribute('data-date')
+          );
+        }
+      });
+    }
+
+    initAdminDatePickers();
+
     var formAdminFiltre = document.getElementById('form-admin-filtre');
     if (formAdminFiltre) {
       formAdminFiltre.addEventListener('submit', function (e) {
