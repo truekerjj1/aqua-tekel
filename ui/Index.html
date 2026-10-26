@@ -20,14 +20,15 @@
         <p class="badge-test"><?= environmentLabel ?></p>
       </header>
 
-      <!-- Giriş -->
+      <!-- Giriş — marka hero + etkileşim kartı -->
       <div id="login-view" class="login-wrap">
+        <div class="login-hero anim-rise">
+          <div class="brand-mark" aria-hidden="true">AT</div>
+          <p class="login-brand"><?= brandName ?></p>
+          <p class="login-tagline"><?= brandSubtitle ?></p>
+          <span class="login-badge"><?= environmentLabel ?></span>
+        </div>
         <div class="login-card anim-rise">
-          <div class="login-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2zm-7-2a2 2 0 0 1 4 0v2h-4V6zm3 9.7a1.5 1.5 0 1 1-1-2.7 1.5 1.5 0 0 1 1 2.7z"/>
-            </svg>
-          </div>
           <h1 class="login-title">Güvenli giriş</h1>
           <p class="login-lead">Yetkili kullanıcı bilgilerinizle işlem ekranına giriş yapın.</p>
           <form class="form-login" id="form-login" autocomplete="off">
