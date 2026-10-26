@@ -42,7 +42,9 @@ Test: Fatih `TEST4567` (patron) · Sercan `TEST2345` (personel) — `Config.TEST
 
 **Yetki:** Yönetici / onay / tedarikçi düzenle-sil → yalnız **patron**. Personel gelir, gider, ödeme, fatura ekler (onaya düşer); profilinde son işlemlerini görür.
 
-Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / örnek veri / panel talimatı.
+Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / örnek veri / **haftalık özet tetikleyicisi (Pzt 09:00)** / panel talimatı.
+
+**Haftalık Özet (patron):** önceki Pzt–Paz ödemeler, firma kırılımı, fatura/gelir/gider, giriş sayıları. Localhost: Yönetici menüsünde **Haftalık Özet** → «Özeti simüle et» → `local/data/weekly-digest.json` (gerçek e-posta yok).
 
 ### İleride: `clasp push` (isteğe bağlı)
 
@@ -62,10 +64,11 @@ Kod hazır olunca Google’a elle yapıştırmak yerine [clasp](https://github.c
 | `src/Auth.gs` | Giriş / oturum / patron–personel |
 | `src/Approvals.gs` | Onay kuyruğu |
 | `src/Admin.gs` | Yönetici özet / filtre / grafik |
+| `src/Digest.gs` | Pazartesi 09:00 Istanbul haftalık özet (ödeme / firma / giriş) |
 | `src/Attachments.gs` | Dekont → Drive (Google’da) |
 | `src/Users.gs` | Kullanıcı yönetimi + sheet senkron |
 | `src/SampleData.gs` | Örnek test verisi |
-| `ui/` | Mobil panel HTML |
+| `ui/` | Mobil panel HTML (logo, hamburger menü, Haftalık Özet) |
 
 ---
 

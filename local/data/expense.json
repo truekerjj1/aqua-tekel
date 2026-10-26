@@ -1,6 +1,6 @@
 [
   {
-    "tarih": "04.10.2026",
+    "tarih": "20.10.2026",
     "tutar": 200,
     "aciklama": "Örnek yemek",
     "kategori": "Yemek",
@@ -8,7 +8,7 @@
     "kullanici": "Sercan Toprak"
   },
   {
-    "tarih": "11.10.2026",
+    "tarih": "22.10.2026",
     "tutar": 85,
     "aciklama": "Örnek temizlik",
     "kategori": "Temizlik",
@@ -16,7 +16,7 @@
     "kullanici": "Aleyna Toprak"
   },
   {
-    "tarih": "16.10.2026",
+    "tarih": "23.10.2026",
     "tutar": 1200,
     "aciklama": "Örnek kira payı",
     "kategori": "Kira",

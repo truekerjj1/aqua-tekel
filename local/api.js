@@ -46,6 +46,185 @@ function todayKey() {
   return d.getFullYear() + '-' + mm + '-' + dd;
 }
 
+/** Önceki takvim haftası Pzt–Paz (yerel saat; localhost ≈ Istanbul). */
+function previousWeekRange() {
+  var now = new Date();
+  var dow = now.getDay();
+  var daysSinceMon = (dow + 6) % 7;
+  var thisMon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMon);
+  var prevMon = new Date(thisMon.getFullYear(), thisMon.getMonth(), thisMon.getDate() - 7);
+  var prevSun = new Date(prevMon.getFullYear(), prevMon.getMonth(), prevMon.getDate() + 6);
+  function iso(d) {
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + mm + '-' + dd;
+  }
+  return {
+    baslangic: iso(prevMon),
+    bitis: iso(prevSun),
+    baslangicTr: formatDateTr(prevMon),
+    bitisTr: formatDateTr(prevSun)
+  };
+}
+
+function formatDigestMoney(n) {
+  if (n == null || isNaN(Number(n))) return '0';
+  return (Math.round(Number(n) * 100) / 100).toLocaleString('tr-TR');
+}
+
+function logSuccessfulLogin(user) {
+  var logins = store.readJson('logins', []);
+  var now = new Date();
+  logins.push({
+    tarih: formatDateTr(now),
+    saat:
+      String(now.getHours()).padStart(2, '0') +
+      ':' +
+      String(now.getMinutes()).padStart(2, '0') +
+      ':' +
+      String(now.getSeconds()).padStart(2, '0'),
+    userId: user.id,
+    ad: user.ad,
+    rol: user.rol
+  });
+  store.writeJson('logins', logins);
+}
+
+function countLoginsInRange(bas, bit) {
+  var logins = store.readJson('logins', []);
+  var byUser = {};
+  var toplam = 0;
+  logins.forEach(function (row) {
+    var k = parseDateKey(row.tarih);
+    if (!k || (bas && k < bas) || (bit && k > bit)) return;
+    toplam++;
+    var ad = String(row.ad || row.userId || '—').trim() || '—';
+    byUser[ad] = (byUser[ad] || 0) + 1;
+  });
+  var list = Object.keys(byUser).map(function (ad) {
+    return { ad: ad, adet: byUser[ad] };
+  });
+  list.sort(function (a, b) {
+    return b.adet - a.adet;
+  });
+  return { toplam: toplam, byUser: list };
+}
+
+function buildWeeklyDigest() {
+  var range = previousWeekRange();
+  var bas = range.baslangic;
+  var bit = range.bitis;
+  var odemeToplam = 0;
+  var odemeAdet = 0;
+  var byFirm = {};
+  var faturaToplam = 0;
+  var faturaAdet = 0;
+  var gelirToplam = 0;
+  var gelirAdet = 0;
+  var giderToplam = 0;
+  var giderAdet = 0;
+
+  store.readJson('payments', []).forEach(function (pr) {
+    if (!inDateRange(pr.tarih, bas, bit)) return;
+    var pt = parseTutar(pr.tutar);
+    if (isNaN(pt)) return;
+    odemeToplam += pt;
+    odemeAdet++;
+    var firm = String(pr.tedarikci || '—').trim() || '—';
+    if (!byFirm[firm]) byFirm[firm] = { ad: firm, tutar: 0, adet: 0 };
+    byFirm[firm].tutar += pt;
+    byFirm[firm].adet++;
+  });
+
+  store.readJson('invoices', []).forEach(function (ir) {
+    if (!inDateRange(ir.tarih, bas, bit)) return;
+    var it = parseTutar(ir.tutar);
+    if (isNaN(it)) return;
+    faturaToplam += it;
+    faturaAdet++;
+  });
+
+  store.readJson('income', []).forEach(function (gr) {
+    if (!inDateRange(gr.tarih, bas, bit)) return;
+    var gt = parseTutar(gr.tutar);
+    if (isNaN(gt)) return;
+    gelirToplam += gt;
+    gelirAdet++;
+  });
+
+  store.readJson('expense', []).forEach(function (er) {
+    if (!inDateRange(er.tarih, bas, bit)) return;
+    var et = parseTutar(er.tutar);
+    if (isNaN(et)) return;
+    giderToplam += et;
+    giderAdet++;
+  });
+
+  var firms = Object.keys(byFirm).map(function (k) {
+    return byFirm[k];
+  });
+  firms.sort(function (a, b) {
+    return b.tutar - a.tutar;
+  });
+
+  var logins = countLoginsInRange(bas, bit);
+  var now = new Date();
+  var lines = [];
+  lines.push('Aqua Tekel — Haftalık Özet');
+  lines.push('Dönem: ' + range.baslangicTr + ' – ' + range.bitisTr + ' (önceki hafta)');
+  lines.push('');
+  lines.push(
+    'Bu hafta toplam ' +
+      formatDigestMoney(odemeToplam) +
+      ' ₺ ödeme yapıldı (' +
+      odemeAdet +
+      ' kayıt).'
+  );
+  if (firms.length) {
+    lines.push('Firmalara göre:');
+    firms.forEach(function (f) {
+      lines.push(
+        '  · ' + f.ad + ': ' + formatDigestMoney(f.tutar) + ' ₺ (' + f.adet + ' ödeme)'
+      );
+    });
+  } else {
+    lines.push('Firmalara ödeme kaydı yok.');
+  }
+  lines.push(
+    'Faturalar: ' +
+      formatDigestMoney(faturaToplam) +
+      ' ₺ (' +
+      faturaAdet +
+      ' adet)'
+  );
+  lines.push(
+    'Gelir: ' +
+      formatDigestMoney(gelirToplam) +
+      ' ₺ · Gider: ' +
+      formatDigestMoney(giderToplam) +
+      ' ₺'
+  );
+  lines.push('Kullanıcı girişleri: ' + logins.toplam + ' başarılı giriş.');
+  logins.byUser.forEach(function (u) {
+    lines.push('  · ' + u.ad + ': ' + u.adet);
+  });
+
+  return {
+    ok: true,
+    generatedAt: now.toISOString(),
+    generatedAtTr: formatDateTr(now) + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'),
+    timezone: 'Europe/Istanbul',
+    simulated: true,
+    period: range,
+    odeme: { toplam: odemeToplam, adet: odemeAdet, byFirm: firms },
+    fatura: { toplam: faturaToplam, adet: faturaAdet },
+    gelir: { toplam: gelirToplam, adet: gelirAdet },
+    gider: { toplam: giderToplam, adet: giderAdet },
+    giris: logins,
+    metin: lines.join('\n')
+  };
+}
+
 function parseDateKey(val) {
   if (val == null || val === '') return '';
   if (val instanceof Date && !isNaN(val.getTime())) {
@@ -464,6 +643,11 @@ var handlers = {
     }
     var session = { id: user.id, ad: user.ad, rol: user.rol };
     ctx.setSession(session);
+    try {
+      logSuccessfulLogin(user);
+    } catch (e) {
+      // log opsiyonel
+    }
     return {
       ok: true,
       message: 'Giriş başarılı. Merhaba ' + user.ad + '.',
@@ -1147,6 +1331,52 @@ var handlers = {
       TEST_USERS: cfg.TEST_USERS.map(function (u) {
         return { id: u.id, ad: u.ad, rol: u.rol };
       })
+    };
+  },
+
+  /** Patron: haftalık özeti simüle et (e-posta yok; local/data/weekly-digest.json). */
+  runWeeklyDigest: function (ctx, opts) {
+    var denied = denyUnlessManager(ctx);
+    if (denied) {
+      return { ok: false, message: denied.message, digest: null, mailed: false };
+    }
+    opts = opts || {};
+    var digest = buildWeeklyDigest();
+    store.writeJson('weekly-digest', digest);
+    return {
+      ok: true,
+      message:
+        'Haftalık özet simüle edildi (e-posta gönderilmedi). Sonuç: local/data/weekly-digest.json',
+      mailed: false,
+      digest: digest
+    };
+  },
+
+  getLastWeeklyDigest: function (ctx) {
+    var denied = denyUnlessManager(ctx);
+    if (denied) {
+      return { ok: false, message: denied.message, digest: null };
+    }
+    var digest = store.readJson('weekly-digest', null);
+    if (!digest) {
+      return {
+        ok: true,
+        message: 'Henüz haftalık özet üretilmedi. «Özeti simüle et» ile oluşturun.',
+        digest: null
+      };
+    }
+    return { ok: true, message: 'Son haftalık özet.', digest: digest };
+  },
+
+  installWeeklyDigestTrigger: function (ctx) {
+    var denied = denyUnlessManager(ctx);
+    if (denied) {
+      return { ok: false, message: denied.message };
+    }
+    return {
+      ok: true,
+      message:
+        'Localhost’ta zamanlayıcı yok. GAS’ta installWeeklyDigestTrigger() → Pazartesi 09:00 Europe/Istanbul.'
     };
   }
 };

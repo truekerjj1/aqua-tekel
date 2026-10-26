@@ -1,6 +1,6 @@
 [
   {
-    "tarih": "08.10.2026",
+    "tarih": "20.10.2026",
     "tedarikci": "Mavi Su Ltd",
     "tutar": 500,
     "yontem": "Nakit",
@@ -12,7 +12,7 @@
     "dekontUrl": ""
   },
   {
-    "tarih": "12.10.2026",
+    "tarih": "22.10.2026",
     "tedarikci": "Kaynak Dağıtım",
     "tutar": 320,
     "yontem": "Kredi kartı",
@@ -24,7 +24,7 @@
     "dekontUrl": ""
   },
   {
-    "tarih": "18.10.2026",
+    "tarih": "23.10.2026",
     "tedarikci": "Tekel Ambalaj",
     "tutar": 200,
     "yontem": "Vadeli",

@@ -184,6 +184,11 @@ function login(userId, accessCode) {
     rol: user.rol
   };
   setSessionUser_(session);
+  try {
+    logSuccessfulLogin_(user.id, user.ad, user.rol);
+  } catch (eLog) {
+    // Giriş logu opsiyonel
+  }
   return {
     ok: true,
     message: 'Giriş başarılı. Merhaba ' + user.ad + '.',

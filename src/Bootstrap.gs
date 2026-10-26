@@ -45,6 +45,10 @@ var TEST_SAYFALARI = [
   {
     ad: 'Onaylar',
     basliklar: ['Id', 'Tip', 'RefId', 'Kullanici', 'Tarih', 'Durum', 'Ozet']
+  },
+  {
+    ad: 'GirisLog',
+    basliklar: ['Tarih', 'Saat', 'UserId', 'Ad', 'Rol']
   }
 ];
 

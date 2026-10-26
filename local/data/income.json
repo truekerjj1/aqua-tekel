@@ -1,6 +1,6 @@
 [
   {
-    "tarih": "03.10.2026",
+    "tarih": "19.10.2026",
     "tutar": 2400,
     "aciklama": "Örnek satış — mağaza",
     "kategori": "Satış",
@@ -9,7 +9,7 @@
     "kullanici": "Fatih Toprak"
   },
   {
-    "tarih": "09.10.2026",
+    "tarih": "21.10.2026",
     "tutar": 1100,
     "aciklama": "Örnek satış — kart",
     "kategori": "Satış",
@@ -18,7 +18,7 @@
     "kullanici": "Sercan Toprak"
   },
   {
-    "tarih": "15.10.2026",
+    "tarih": "23.10.2026",
     "tutar": 350,
     "aciklama": "Örnek diğer gelir",
     "kategori": "Diğer",
