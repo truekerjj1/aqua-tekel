@@ -122,16 +122,21 @@ function loadSampleTestData() {
       tarih: '04.10.2026',
       tutar: 200,
       aciklama: 'Örnek kira taksiti',
-      tedarikci: '',
       kategori: 'Kira',
       not: 'Örnek gider'
     },
     {
       tarih: '11.10.2026',
       tutar: 180,
-      aciklama: 'Örnek mal alımı',
-      tedarikci: 'Tekel Ambalaj',
-      kategori: 'Mal',
+      aciklama: 'Örnek market alışverişi',
+      kategori: 'Market',
+      not: 'Örnek gider'
+    },
+    {
+      tarih: '14.10.2026',
+      tutar: 95,
+      aciklama: 'Örnek yemek gideri',
+      kategori: 'Yemek',
       not: 'Örnek gider'
     }
   ];
@@ -212,11 +217,12 @@ function loadSampleTestData() {
     if (txExists_(existingGid, x.tarih, x.tutar, x.aciklama)) {
       continue;
     }
+    // Gider: Tarih, Tutar, Açıklama, Kategori, Not (tedarikçi yok)
     sheetGid.appendRow([
-      x.tarih, x.tutar, x.aciklama, x.tedarikci, x.kategori, x.not
+      x.tarih, x.tutar, x.aciklama, x.kategori, x.not
     ]);
     existingGid.push([
-      x.tarih, x.tutar, x.aciklama, x.tedarikci, x.kategori, x.not
+      x.tarih, x.tutar, x.aciklama, x.kategori, x.not
     ]);
     added.gider++;
   }

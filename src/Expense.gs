@@ -3,11 +3,12 @@
  *
  * Aktif tabloya yazar: SpreadsheetApp.getActiveSpreadsheet().
  * YOUR_SPREADSHEET_ID zorunlu değildir; canlı ID kullanılmaz.
+ * Gider tedarikçi kullanmaz — kategori (CONFIG.GIDER_KATEGORILERI).
  */
 
 /**
  * Yeni gider kaydı ekler.
- * @param {Object} kayit — {tarih, tutar, aciklama, tedarikci, kategori, not}
+ * @param {Object} kayit — {tarih, tutar, aciklama, kategori, not}
  * @return {{ok: boolean, message: string, duplicate?: boolean}}
  */
 function addExpense(kayit) {
@@ -26,6 +27,14 @@ function addExpense(kayit) {
     };
   }
 
+  var kategori = String(kayit.kategori || '').trim();
+  if (!kategori) {
+    return {
+      ok: false,
+      message: 'Gider için kategori seçin.'
+    };
+  }
+
   var dedup = checkDedup(kayit, 'gider');
   if (!dedup.ok) {
     return dedup;
@@ -37,12 +46,12 @@ function addExpense(kayit) {
     return { ok: false, message: got.message };
   }
 
+  // Sütunlar: Tarih, Tutar, Açıklama, Kategori, Not (tedarikçi yok)
   got.sheet.appendRow([
     kayit.tarih,
     tutar,
     String(kayit.aciklama),
-    kayit.tedarikci || '',
-    kayit.kategori || '',
+    kategori,
     kayit.not || ''
   ]);
 
@@ -51,7 +60,7 @@ function addExpense(kayit) {
 
 /**
  * Gider listesini okur.
- * @param {Object=} filtre — {tedarikci, kategori} isteğe bağlı
+ * @param {Object=} filtre — {kategori} isteğe bağlı
  * @return {{ok: boolean, message: string, rows: Array<Object>}}
  */
 function listExpense(filtre) {
@@ -66,19 +75,19 @@ function listExpense(filtre) {
   var rows = [];
   for (var i = 0; i < data.length; i++) {
     var r = data[i];
+    // Boş / placeholder satırları atla
+    if (!String(r[0] || '').trim() && !String(r[2] || '').trim() &&
+        (r[1] === '' || r[1] == null)) {
+      continue;
+    }
     var obj = {
       row: i + 2,
       tarih: r[0],
       tutar: r[1],
       aciklama: r[2],
-      tedarikci: r[3],
-      kategori: r[4],
-      not: r[5]
+      kategori: r[3],
+      not: r[4]
     };
-    if (filtre.tedarikci &&
-        normalizeKeyPart(obj.tedarikci) !== normalizeKeyPart(filtre.tedarikci)) {
-      continue;
-    }
     if (filtre.kategori &&
         normalizeKeyPart(obj.kategori) !== normalizeKeyPart(filtre.kategori)) {
       continue;
@@ -116,21 +125,38 @@ function updateExpense(id, kayit) {
     return { ok: false, message: 'Gider satırı bulunamadı.' };
   }
 
-  var existing = got.sheet.getRange(rowNum, 1, rowNum, 6).getValues()[0];
+  var existing = got.sheet.getRange(rowNum, 1, rowNum, 5).getValues()[0];
   var tarih = kayit.tarih !== undefined ? kayit.tarih : existing[0];
   var tutar = kayit.tutar !== undefined ? parseTutar(kayit.tutar) : existing[1];
   var aciklama = kayit.aciklama !== undefined ? kayit.aciklama : existing[2];
-  var tedarikci = kayit.tedarikci !== undefined ? kayit.tedarikci : existing[3];
-  var kategori = kayit.kategori !== undefined ? kayit.kategori : existing[4];
-  var not = kayit.not !== undefined ? kayit.not : existing[5];
+  var kategori = kayit.kategori !== undefined ? kayit.kategori : existing[3];
+  var not = kayit.not !== undefined ? kayit.not : existing[4];
 
   if (isNaN(parseTutar(tutar))) {
     return { ok: false, message: 'Geçersiz tutar.' };
   }
+  if (!String(kategori || '').trim()) {
+    return { ok: false, message: 'Gider için kategori gerekli.' };
+  }
 
-  got.sheet.getRange(rowNum, 1, rowNum, 6).setValues([[
-    tarih, parseTutar(tutar), aciklama, tedarikci, kategori, not
+  got.sheet.getRange(rowNum, 1, rowNum, 5).setValues([[
+    tarih, parseTutar(tutar), aciklama, kategori, not
   ]]);
 
   return { ok: true, message: 'Gider kaydı güncellendi.' };
+}
+
+/**
+ * Panel gider select için kategori listesi.
+ * google.script.run → listExpenseCategories
+ * @return {{ok: boolean, message: string, categories: Array<string>}}
+ */
+function listExpenseCategories() {
+  var cfg = getConfig();
+  var list = cfg.GIDER_KATEGORILERI || [];
+  return {
+    ok: true,
+    message: 'Tamam',
+    categories: list.slice()
+  };
 }

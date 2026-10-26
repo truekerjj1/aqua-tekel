@@ -11,7 +11,7 @@
  * @return {{ok: boolean, message: string, duplicate?: boolean}}
  */
 function addInvoice(kayit) {
-  // Fatura ekleme yalnız patron — personel görüntüleyebilir.
+  // Fatura ekleme: patron veya personel (tedarikçi ekleme hâlâ yalnız patron).
   var denied = denyUnlessInvoiceManager();
   if (denied) {
     return denied;
@@ -105,7 +105,7 @@ function listInvoices(filtre) {
  * @return {{ok: boolean, message: string}}
  */
 function updateInvoice(id, kayit) {
-  // Fatura düzenleme yalnız patron.
+  // Fatura düzenleme: patron veya personel.
   var denied = denyUnlessInvoiceManager();
   if (denied) {
     return denied;

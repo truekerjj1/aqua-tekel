@@ -27,9 +27,10 @@ Başlık satırları `Bootstrap.gs` / `Config.gs` ile aynı olmalıdır.
 | Tarih | İşlem tarihi |
 | Tutar | Pozitif sayı (TL) |
 | Açıklama | Kısa metin |
-| Tedarikçi | `Tedarikçiler!Ad` ile aynı yazım |
-| Kategori | Örn. Mal, Kira, Diğer |
+| Kategori | `CONFIG.GIDER_KATEGORILERI` — Yemek, Mutfak, Temizlik, Market, Muhasebe, Kira, Elektrik, Su, Diğer |
 | Not | İsteğe bağlı |
+
+> Gider **tedarikçi kullanmaz**. Tedarikçi borçları Faturalar − Ödemeler ile hesaplanır.
 
 ### Tedarikçiler
 

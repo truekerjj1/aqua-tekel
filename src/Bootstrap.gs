@@ -18,7 +18,7 @@ var TEST_SAYFALARI = [
   },
   {
     ad: 'Gider',
-    basliklar: ['Tarih', 'Tutar', 'Açıklama', 'Tedarikçi', 'Kategori', 'Not']
+    basliklar: ['Tarih', 'Tutar', 'Açıklama', 'Kategori', 'Not']
   },
   {
     ad: 'Tedarikçiler',
