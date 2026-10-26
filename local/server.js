@@ -59,19 +59,23 @@ function renderIndex() {
   // Kalan scriptlet’leri temizle (beklenmeyen)
   html = html.replace(/<\?[\s\S]*?\?>/g, '');
 
+  // Proxy zinciri: withSuccessHandler apiObj dönerse .listUsersForLogin kırılır —
+  // handler’lar her zaman aynı Proxy’yi döndürmeli (GAS google.script.run davranışı).
   var mockScript =
     '<script>\n' +
     '(function () {\n' +
     '  function makeRunner() {\n' +
     '    var ok = null;\n' +
     '    var fail = null;\n' +
-    '    var apiObj = {\n' +
-    '      withSuccessHandler: function (fn) { ok = fn; return apiObj; },\n' +
-    '      withFailureHandler: function (fn) { fail = fn; return apiObj; }\n' +
-    '    };\n' +
-    '    return new Proxy(apiObj, {\n' +
+    '    var apiObj = {};\n' +
+    '    var proxy = new Proxy(apiObj, {\n' +
     '      get: function (target, prop) {\n' +
-    '        if (prop in target) return target[prop];\n' +
+    '        if (prop === "withSuccessHandler") {\n' +
+    '          return function (fn) { ok = fn; return proxy; };\n' +
+    '        }\n' +
+    '        if (prop === "withFailureHandler") {\n' +
+    '          return function (fn) { fail = fn; return proxy; };\n' +
+    '        }\n' +
     '        if (typeof prop !== "string") return undefined;\n' +
     '        return function () {\n' +
     '          var args = Array.prototype.slice.call(arguments);\n' +
@@ -95,6 +99,7 @@ function renderIndex() {
     '        };\n' +
     '      }\n' +
     '    });\n' +
+    '    return proxy;\n' +
     '  }\n' +
     '  window.google = {\n' +
     '    script: {\n' +
@@ -297,6 +302,23 @@ const server = http.createServer(async function (req, res) {
 
     if (req.method === 'GET' && pathname === '/health') {
       send(res, 200, { ok: true, local: true, port: cfg.PORT });
+      return;
+    }
+
+    // Doğrudan kullanıcı listesi (Client listUsersForLogin ile aynı şekil)
+    if (req.method === 'GET' && pathname === '/api/users') {
+      var ctxUsers = makeCtx(req, res);
+      try {
+        var usersResult = api.dispatch('listUsersForLogin', [], ctxUsers);
+        send(res, 200, usersResult, ctxUsers.applyCookies({}));
+      } catch (e) {
+        send(
+          res,
+          200,
+          { ok: false, message: e && e.message ? e.message : String(e), users: [] },
+          ctxUsers.applyCookies({})
+        );
+      }
       return;
     }
 
