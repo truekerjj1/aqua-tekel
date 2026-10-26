@@ -123,14 +123,24 @@ function getDataRows(sheet) {
 function getAppInfo() {
   var cfg = getConfig();
   var role = getUserRole();
+  var sess = getSession();
+  var displayName = (sess && sess.session && sess.session.ad) || '';
+  var greet = displayName
+    ? ('Merhaba ' + displayName)
+    : ('Merhaba ' + (cfg.BRAND_NAME || 'Aqua Tekel'));
   return {
     brand: cfg.BRAND_NAME,
+    brandSubtitle: cfg.BRAND_SUBTITLE || 'Cari işlem yönetimi',
     environmentLabel: cfg.ENVIRONMENT_LABEL,
     spreadsheetConfigured: isSpreadsheetConfigured(),
     usesActiveSpreadsheet: true,
     userEmail: getCurrentUserEmail(),
+    userName: displayName,
     role: role,
     canWrite: canWriteRecords(),
-    message: 'Merhaba Aqua Tekel'
+    canManage: canManageSettings(),
+    loggedIn: !!(sess && sess.loggedIn),
+    session: (sess && sess.session) || null,
+    message: greet
   };
 }

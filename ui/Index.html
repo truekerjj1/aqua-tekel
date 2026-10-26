@@ -7,122 +7,200 @@
     <title><?= brandName ?></title>
     <?!= include('ui/Styles'); ?>
   </head>
-  <body>
+  <body class="is-login">
     <div class="page">
-      <header class="top">
-        <p class="badge"><?= environmentLabel ?></p>
-        <h1 class="brand"><?= brandName ?></h1>
-        <p class="lead">Merhaba Aqua Tekel</p>
-        <p class="sub">Bu panel test içindir. Canlı muhasebe dosyasına bağlı değildir.</p>
+      <header class="site-header">
+        <div class="brand-block">
+          <div class="brand-mark" aria-hidden="true">AT</div>
+          <div class="brand-text">
+            <p class="brand-name"><?= brandName ?></p>
+            <p class="brand-sub"><?= brandSubtitle ?></p>
+          </div>
+        </div>
+        <p class="badge-test"><?= environmentLabel ?></p>
       </header>
 
-      <nav class="tabs" role="tablist" aria-label="Panel sekmeleri">
-        <button type="button" class="tab is-active" data-tab="ozet" role="tab" aria-selected="true">Özet</button>
-        <button type="button" class="tab" data-tab="gelir" role="tab" aria-selected="false">Gelir</button>
-        <button type="button" class="tab" data-tab="gider" role="tab" aria-selected="false">Gider</button>
-        <button type="button" class="tab" data-tab="tedarikci" role="tab" aria-selected="false">Tedarikçi</button>
-      </nav>
-
-      <main class="panel">
-        <section class="tab-panel is-active" id="panel-ozet" role="tabpanel">
-          <p class="status" id="status">Yükleniyor…</p>
-          <dl class="meta" id="meta" hidden>
-            <div>
-              <dt>Rol</dt>
-              <dd id="role">—</dd>
-            </div>
-            <div>
-              <dt>Kullanıcı</dt>
-              <dd id="email">—</dd>
-            </div>
-            <div>
-              <dt>Tablo</dt>
-              <dd id="sheet">—</dd>
-            </div>
-            <div>
-              <dt>Yazma</dt>
-              <dd id="yazma">—</dd>
-            </div>
-          </dl>
-          <dl class="meta summary-totals" id="summary-totals" hidden>
-            <div>
-              <dt>Gelir toplamı</dt>
-              <dd id="sum-gelir">—</dd>
-            </div>
-            <div>
-              <dt>Gider toplamı</dt>
-              <dd id="sum-gider">—</dd>
-            </div>
-            <div>
-              <dt>Tedarikçi borç toplamı</dt>
-              <dd id="sum-borc">—</dd>
-            </div>
-          </dl>
-          <ul class="list" id="list-borc-ozet" hidden></ul>
-          <p class="hint">Sandbox özeti. Veri, bağlı test tablosundan okunur (YOUR_SPREADSHEET_ID gerekmez).</p>
-        </section>
-
-        <section class="tab-panel" id="panel-gelir" role="tabpanel" hidden>
-          <h2 class="section-title">Gelir</h2>
-          <p class="hint">Test kaydı eklemek için tarih, tutar ve açıklama girin.</p>
-          <form class="form" id="form-gelir">
-            <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
-            <label>Tutar <input name="tutar" type="text" inputmode="decimal" placeholder="100" required /></label>
-            <label>Açıklama <input name="aciklama" type="text" required /></label>
-            <label>Kategori <input name="kategori" type="text" placeholder="Satış" /></label>
-            <button type="submit" class="btn">Gelir ekle</button>
+      <!-- Giriş ekranı -->
+      <div id="login-view" class="login-wrap">
+        <div class="login-card">
+          <div class="login-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2zm-7-2a2 2 0 0 1 4 0v2h-4V6zm3 9.7a1.5 1.5 0 1 1-1-2.7 1.5 1.5 0 0 1 1 2.7z"/>
+            </svg>
+          </div>
+          <h1 class="login-title">Güvenli giriş</h1>
+          <p class="login-lead">Yetkili kullanıcı bilgilerinizle işlem ekranına giriş yap.</p>
+          <form class="form-login" id="form-login" autocomplete="off">
+            <label>
+              Kullanıcı
+              <select name="userId" id="login-user" required>
+                <option value="">Kullanıcı seçin</option>
+              </select>
+            </label>
+            <label>
+              Kişisel erişim kodu
+              <input
+                name="accessCode"
+                id="login-code"
+                type="password"
+                inputmode="text"
+                autocomplete="current-password"
+                placeholder="Erişim kodunuz"
+                required
+              />
+            </label>
+            <button type="submit" class="btn" id="btn-login">Giriş Yap</button>
+            <p class="form-msg" id="msg-login" hidden></p>
           </form>
-          <p class="form-msg" id="msg-gelir" hidden></p>
-          <ul class="list" id="list-gelir"></ul>
-        </section>
+          <button type="button" class="login-forgot" id="btn-forgot">Şifremi unuttum</button>
+        </div>
+      </div>
 
-        <section class="tab-panel" id="panel-gider" role="tabpanel" hidden>
-          <h2 class="section-title">Gider</h2>
-          <p class="hint">Test gideri; tedarikçi adı Tedarikçiler sayfası ile aynı yazılmalı.</p>
-          <form class="form" id="form-gider">
-            <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
-            <label>Tutar <input name="tutar" type="text" inputmode="decimal" placeholder="50" required /></label>
-            <label>Açıklama <input name="aciklama" type="text" required /></label>
-            <label>Tedarikçi <input name="tedarikci" type="text" /></label>
-            <button type="submit" class="btn">Gider ekle</button>
-          </form>
-          <p class="form-msg" id="msg-gider" hidden></p>
-          <ul class="list" id="list-gider"></ul>
-        </section>
+      <!-- Ana panel (oturum sonrası) -->
+      <div id="app-view" hidden>
+        <div class="app-toolbar">
+          <p class="user-chip">
+            <strong id="chip-name">—</strong>
+            <span class="role-pill" id="chip-role">—</span>
+          </p>
+          <button type="button" class="btn-ghost" id="btn-logout">Çıkış</button>
+        </div>
 
-        <section class="tab-panel" id="panel-tedarikci" role="tabpanel" hidden>
-          <h2 class="section-title">Tedarikçi</h2>
-          <p class="hint">Kalan borç = Faturalar tutar toplamı − Ödemeler tutar toplamı.</p>
-          <form class="form" id="form-tedarikci">
-            <label>Ad <input name="ad" type="text" required /></label>
-            <label>Telefon <input name="telefon" type="text" /></label>
-            <label>Not <input name="not" type="text" /></label>
-            <button type="submit" class="btn">Tedarikçi ekle</button>
-          </form>
-          <p class="form-msg" id="msg-tedarikci" hidden></p>
-          <ul class="list" id="list-tedarikci"></ul>
+        <nav class="tabs" role="tablist" aria-label="Panel sekmeleri">
+          <button type="button" class="tab is-active" data-tab="ozet" role="tab" aria-selected="true">Özet</button>
+          <button type="button" class="tab" data-tab="gelir" role="tab" aria-selected="false">Gelir</button>
+          <button type="button" class="tab" data-tab="gider" role="tab" aria-selected="false">Gider</button>
+          <button type="button" class="tab" data-tab="tedarikci" role="tab" aria-selected="false">Tedarikçi</button>
+        </nav>
 
-          <h3 class="section-title">Fatura ekle</h3>
-          <form class="form" id="form-fatura">
-            <label>Fatura no <input name="faturaNo" type="text" required /></label>
-            <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
-            <label>Tedarikçi <input name="tedarikci" type="text" required /></label>
-            <label>Tutar <input name="tutar" type="text" inputmode="decimal" required /></label>
-            <button type="submit" class="btn">Fatura ekle</button>
-          </form>
-          <p class="form-msg" id="msg-fatura" hidden></p>
+        <main class="panel">
+          <section class="tab-panel is-active" id="panel-ozet" role="tabpanel">
+            <p class="status" id="status">Yükleniyor…</p>
+            <dl class="meta" id="meta" hidden>
+              <div>
+                <dt>Rol</dt>
+                <dd id="role">—</dd>
+              </div>
+              <div>
+                <dt>Kullanıcı</dt>
+                <dd id="email">—</dd>
+              </div>
+              <div>
+                <dt>Tablo</dt>
+                <dd id="sheet">—</dd>
+              </div>
+              <div>
+                <dt>Yazma</dt>
+                <dd id="yazma">—</dd>
+              </div>
+              <div class="patron-only" id="meta-ayar" hidden>
+                <dt>Ayar / silme</dt>
+                <dd id="ayar">—</dd>
+              </div>
+            </dl>
+            <dl class="meta summary-totals" id="summary-totals" hidden>
+              <div>
+                <dt>Gelir toplamı</dt>
+                <dd id="sum-gelir">—</dd>
+              </div>
+              <div>
+                <dt>Gider toplamı</dt>
+                <dd id="sum-gider">—</dd>
+              </div>
+              <div>
+                <dt>Tedarikçi borç toplamı</dt>
+                <dd id="sum-borc">—</dd>
+              </div>
+            </dl>
+            <h2 class="section-title">Tedarikçi borçları</h2>
+            <ul class="list debt-list" id="list-borc-ozet" hidden></ul>
+            <p class="hint">Sandbox özeti. Veri, bağlı test tablosundan okunur (YOUR_SPREADSHEET_ID gerekmez).</p>
+          </section>
 
-          <h3 class="section-title">Ödeme ekle</h3>
-          <form class="form" id="form-odeme">
-            <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
-            <label>Tedarikçi <input name="tedarikci" type="text" required /></label>
-            <label>Tutar <input name="tutar" type="text" inputmode="decimal" required /></label>
-            <label>Yöntem <input name="yontem" type="text" placeholder="Nakit" /></label>
-            <button type="submit" class="btn">Ödeme ekle</button>
-          </form>
-          <p class="form-msg" id="msg-odeme" hidden></p>
-        </section>
-      </main>
+          <section class="tab-panel" id="panel-gelir" role="tabpanel" hidden>
+            <h2 class="section-title">Gelir</h2>
+            <p class="hint">Test kaydı eklemek için tarih, tutar ve açıklama girin.</p>
+            <form class="form" id="form-gelir">
+              <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
+              <label>Tutar <input name="tutar" type="text" inputmode="decimal" placeholder="100" required /></label>
+              <label>Açıklama <input name="aciklama" type="text" required /></label>
+              <label>Kategori <input name="kategori" type="text" placeholder="Satış" /></label>
+              <button type="submit" class="btn">Gelir ekle</button>
+            </form>
+            <p class="form-msg" id="msg-gelir" hidden></p>
+            <ul class="list" id="list-gelir"></ul>
+          </section>
+
+          <section class="tab-panel" id="panel-gider" role="tabpanel" hidden>
+            <h2 class="section-title">Gider</h2>
+            <p class="hint">Tedarikçiyi listeden seçin (serbest yazı yok).</p>
+            <form class="form" id="form-gider">
+              <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
+              <label>Tutar <input name="tutar" type="text" inputmode="decimal" placeholder="50" required /></label>
+              <label>Açıklama <input name="aciklama" type="text" required /></label>
+              <label>
+                Tedarikçi
+                <select name="tedarikci" id="select-gider-tedarikci">
+                  <option value="">Tedarikçi seçin (isteğe bağlı)</option>
+                </select>
+              </label>
+              <button type="submit" class="btn">Gider ekle</button>
+            </form>
+            <p class="form-msg" id="msg-gider" hidden></p>
+            <ul class="list" id="list-gider"></ul>
+          </section>
+
+          <section class="tab-panel" id="panel-tedarikci" role="tabpanel" hidden>
+            <h2 class="section-title">Tedarikçi borç listesi</h2>
+            <p class="hint">Kalan borç = Faturalar tutar toplamı − Ödemeler tutar toplamı.</p>
+            <ul class="list debt-list" id="list-tedarikci"></ul>
+
+            <h3 class="section-title">Yeni tedarikçi</h3>
+            <form class="form" id="form-tedarikci">
+              <label>Ad <input name="ad" type="text" required /></label>
+              <label>Telefon <input name="telefon" type="text" /></label>
+              <label>Not <input name="not" type="text" /></label>
+              <button type="submit" class="btn">Tedarikçi ekle</button>
+            </form>
+            <p class="form-msg" id="msg-tedarikci" hidden></p>
+
+            <h3 class="section-title">Fatura ekle</h3>
+            <form class="form" id="form-fatura">
+              <label>Fatura no <input name="faturaNo" type="text" required /></label>
+              <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
+              <label>
+                Tedarikçi
+                <select name="tedarikci" id="select-fatura-tedarikci" required>
+                  <option value="">Tedarikçi seçin</option>
+                </select>
+              </label>
+              <label>Tutar <input name="tutar" type="text" inputmode="decimal" required /></label>
+              <button type="submit" class="btn">Fatura ekle</button>
+            </form>
+            <p class="form-msg" id="msg-fatura" hidden></p>
+
+            <h3 class="section-title">Ödeme ekle</h3>
+            <form class="form" id="form-odeme">
+              <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
+              <label>
+                Tedarikçi
+                <select name="tedarikci" id="select-odeme-tedarikci" required>
+                  <option value="">Tedarikçi seçin</option>
+                </select>
+              </label>
+              <label>Tutar <input name="tutar" type="text" inputmode="decimal" required /></label>
+              <label>Yöntem <input name="yontem" type="text" placeholder="Nakit" /></label>
+              <button type="submit" class="btn">Ödeme ekle</button>
+            </form>
+            <p class="form-msg" id="msg-odeme" hidden></p>
+
+            <div class="patron-only" id="ayarlar-bloku" hidden>
+              <h3 class="section-title">Ayarlar (yalnızca patron)</h3>
+              <p class="hint">Personelde silme / ayar yoktur. Bu blok yalnızca patron oturumunda görünür.</p>
+            </div>
+          </section>
+        </main>
+      </div>
     </div>
     <?!= include('ui/Client'); ?>
   </body>

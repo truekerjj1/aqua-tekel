@@ -28,8 +28,12 @@ function loadSampleTestData() {
     fatura: 0,
     odeme: 0,
     gelir: 0,
-    gider: 0
+    gider: 0,
+    kullanici: 0
   };
+
+  // test only — sheet’te kod yok; yalnızca ad/rol (Config.TEST_USERS ile uyumlu örnek)
+  added.kullanici = seedTestUsers_(ss, cfg);
 
   var tedarikciler = [
     { ad: 'Mavi Su Ltd', telefon: '0212 555 0101', not: 'Örnek tedarikçi' },
@@ -219,7 +223,8 @@ function loadSampleTestData() {
 
   var bal = refreshSupplierBalances();
   var totalAdded =
-    added.tedarikci + added.fatura + added.odeme + added.gelir + added.gider;
+    added.tedarikci + added.fatura + added.odeme + added.gelir +
+    added.gider + added.kullanici;
 
   var message =
     totalAdded === 0
@@ -232,11 +237,41 @@ function loadSampleTestData() {
           'Ödeme: ' + added.odeme,
           'Gelir: ' + added.gelir,
           'Gider: ' + added.gider,
+          'Kullanıcı (sheet, kod yok): ' + added.kullanici,
           bal && bal.message ? bal.message : ''
         ].filter(Boolean).join('\n');
 
   alertSample_(message);
   return { ok: true, message: message, added: added };
+}
+
+/**
+ * Kullanicilar sayfasına TEST_USERS ad/rol satırları ekler (kod yazılmaz — test only).
+ * @param {Spreadsheet} ss
+ * @param {Object} cfg
+ * @return {number} eklenen satır
+ */
+function seedTestUsers_(ss, cfg) {
+  var sheet = ss.getSheetByName(cfg.SHEETS.KULLANICILAR);
+  if (!sheet) {
+    return 0;
+  }
+  var existing = getDataRows(sheet);
+  var users = cfg.TEST_USERS || [];
+  var added = 0;
+  for (var i = 0; i < users.length; i++) {
+    var u = users[i];
+    var ad = u.ad;
+    if (rowExistsByKey_(existing, 2, ad)) {
+      continue;
+    }
+    // E-posta placeholder; kod sheet’e yazılmaz (test only, Config’te)
+    var email = String(u.id || 'test') + '@example.com';
+    sheet.appendRow([email, u.rol, ad, 'Evet']);
+    existing.push([email, u.rol, ad, 'Evet']);
+    added++;
+  }
+  return added;
 }
 
 /**

@@ -1,16 +1,27 @@
 <script>
   (function () {
+    var loginView = document.getElementById('login-view');
+    var appView = document.getElementById('app-view');
     var statusEl = document.getElementById('status');
     var metaEl = document.getElementById('meta');
     var roleEl = document.getElementById('role');
     var emailEl = document.getElementById('email');
     var sheetEl = document.getElementById('sheet');
     var yazmaEl = document.getElementById('yazma');
+    var ayarEl = document.getElementById('ayar');
+    var metaAyar = document.getElementById('meta-ayar');
+    var ayarlarBloku = document.getElementById('ayarlar-bloku');
     var summaryEl = document.getElementById('summary-totals');
     var sumGelirEl = document.getElementById('sum-gelir');
     var sumGiderEl = document.getElementById('sum-gider');
     var sumBorcEl = document.getElementById('sum-borc');
     var listBorcOzet = document.getElementById('list-borc-ozet');
+    var chipName = document.getElementById('chip-name');
+    var chipRole = document.getElementById('chip-role');
+    var loginUser = document.getElementById('login-user');
+    var loginCode = document.getElementById('login-code');
+    var btnLogin = document.getElementById('btn-login');
+    var currentSession = null;
     var tabs = document.querySelectorAll('.tab');
     var panels = {
       ozet: document.getElementById('panel-ozet'),
@@ -18,6 +29,11 @@
       gider: document.getElementById('panel-gider'),
       tedarikci: document.getElementById('panel-tedarikci')
     };
+    var supplierSelectIds = [
+      'select-gider-tedarikci',
+      'select-fatura-tedarikci',
+      'select-odeme-tedarikci'
+    ];
 
     function hasGas() {
       return typeof google !== 'undefined' && google.script && google.script.run;
@@ -33,6 +49,102 @@
       if (n == null || isNaN(Number(n))) return '—';
       var x = Number(n);
       return (Math.round(x * 100) / 100).toLocaleString('tr-TR');
+    }
+
+    function setMsg(id, text, ok) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.hidden = !text;
+      el.textContent = text || '';
+      el.classList.toggle('is-ok', !!ok);
+      el.classList.toggle('is-err', !ok);
+    }
+
+    function showLogin() {
+      document.body.classList.add('is-login');
+      loginView.hidden = false;
+      appView.hidden = true;
+      currentSession = null;
+    }
+
+    function showApp(session) {
+      document.body.classList.remove('is-login');
+      loginView.hidden = true;
+      appView.hidden = false;
+      currentSession = session || null;
+      applyRoleUi(session);
+      if (chipName) {
+        chipName.textContent = (session && session.ad) || '—';
+      }
+      if (chipRole) {
+        chipRole.textContent = rolMetni(session && session.rol);
+      }
+    }
+
+    function applyRoleUi(session) {
+      var canManage = !!(session && session.canManage);
+      if (metaAyar) metaAyar.hidden = !canManage;
+      if (ayarlarBloku) ayarlarBloku.hidden = !canManage;
+      if (ayarEl) {
+        ayarEl.textContent = canManage ? 'Açık (patron)' : 'Kapalı (personel)';
+      }
+    }
+
+    function fillLoginUsers(users) {
+      if (!loginUser) return;
+      var keep = loginUser.value;
+      loginUser.innerHTML = '';
+      var opt0 = document.createElement('option');
+      opt0.value = '';
+      opt0.textContent = 'Kullanıcı seçin';
+      loginUser.appendChild(opt0);
+      (users || []).forEach(function (u) {
+        var opt = document.createElement('option');
+        opt.value = u.id;
+        opt.textContent = u.ad;
+        loginUser.appendChild(opt);
+      });
+      if (keep) loginUser.value = keep;
+    }
+
+    function fillSupplierSelects(rows) {
+      supplierSelectIds.forEach(function (id) {
+        var sel = document.getElementById(id);
+        if (!sel) return;
+        var prev = sel.value;
+        var firstLabel =
+          id === 'select-gider-tedarikci'
+            ? 'Tedarikçi seçin (isteğe bağlı)'
+            : 'Tedarikçi seçin';
+        sel.innerHTML = '';
+        var opt0 = document.createElement('option');
+        opt0.value = '';
+        opt0.textContent = firstLabel;
+        sel.appendChild(opt0);
+        (rows || []).forEach(function (r) {
+          var opt = document.createElement('option');
+          opt.value = r.ad || '';
+          opt.textContent = r.ad || '';
+          sel.appendChild(opt);
+        });
+        if (prev) sel.value = prev;
+      });
+    }
+
+    function debtItemHtml(r) {
+      return (
+        '<div class="debt-row">' +
+        '<strong>' +
+        (r.ad || '') +
+        '</strong>' +
+        '<span class="borc-value">' +
+        formatTutar(r.kalanBorc) +
+        ' ₺</span>' +
+        '</div>' +
+        (r.telefon
+          ? '<div class="muted">' + r.telefon + '</div>'
+          : '<div class="muted">Kalan borç</div>')
+      );
     }
 
     function gosterBorcOzeti(summary) {
@@ -55,27 +167,35 @@
         return;
       }
       listBorcOzet.hidden = false;
-      renderList('list-borc-ozet', items, function (r) {
-        return (
-          '<strong>' + (r.ad || '') + '</strong>' +
-          '<div class="muted">Kalan borç: <strong>' +
-          formatTutar(r.kalanBorc) +
-          '</strong></div>'
-        );
-      });
+      renderList('list-borc-ozet', items, debtItemHtml);
     }
 
     function gosterOzet(bilgi) {
-      statusEl.textContent = bilgi.message || 'Merhaba Aqua Tekel';
+      statusEl.textContent = bilgi.message || 'Merhaba';
       roleEl.textContent = rolMetni(bilgi.role);
-      emailEl.textContent = bilgi.userEmail || '—';
+      emailEl.textContent =
+        (bilgi.userName || '') ||
+        bilgi.userEmail ||
+        '—';
       sheetEl.textContent = bilgi.usesActiveSpreadsheet
         ? 'Aktif test tablosu (ID zorunlu değil)'
         : bilgi.spreadsheetConfigured
           ? 'Tanımlı (test)'
           : 'Henüz yok (YOUR_SPREADSHEET_ID)';
-      yazmaEl.textContent = bilgi.canWrite ? 'Açık (patron/personel)' : 'Kapalı (misafir)';
+      yazmaEl.textContent = bilgi.canWrite
+        ? 'Açık (patron/personel)'
+        : 'Kapalı (misafir)';
+      if (ayarEl) {
+        ayarEl.textContent = bilgi.canManage
+          ? 'Açık (patron)'
+          : 'Kapalı (personel)';
+      }
       metaEl.hidden = false;
+      applyRoleUi({
+        canManage: !!bilgi.canManage,
+        rol: bilgi.role,
+        ad: bilgi.userName
+      });
       gosterBorcOzeti(bilgi.summary);
     }
 
@@ -121,15 +241,6 @@
         switchTab(btn.getAttribute('data-tab'));
       });
     });
-
-    function setMsg(id, text, ok) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      el.hidden = !text;
-      el.textContent = text || '';
-      el.classList.toggle('is-ok', !!ok);
-      el.classList.toggle('is-err', !ok);
-    }
 
     function formValues(form) {
       var data = {};
@@ -187,6 +298,7 @@
 
     function loadGider() {
       if (!hasGas()) return;
+      refreshSupplierOptions();
       google.script.run
         .withSuccessHandler(function (res) {
           if (!res || !res.ok) {
@@ -209,24 +321,35 @@
         .listExpense({});
     }
 
+    function refreshSupplierOptions() {
+      if (!hasGas()) return;
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (res && res.ok) {
+            fillSupplierSelects(res.rows || []);
+          }
+        })
+        .withFailureHandler(function () {})
+        .listSuppliers();
+    }
+
     function loadTedarikci() {
       if (!hasGas()) return;
       google.script.run
         .withSuccessHandler(function (res) {
           if (!res || !res.ok) {
-            setMsg('msg-tedarikci', (res && res.message) || 'Tedarikçi okunamadı.', false);
+            setMsg(
+              'msg-tedarikci',
+              (res && res.message) || 'Tedarikçi okunamadı.',
+              false
+            );
             renderList('list-tedarikci', [], null);
+            fillSupplierSelects([]);
             return;
           }
           setMsg('msg-tedarikci', '', true);
-          renderList('list-tedarikci', res.rows, function (r) {
-            var borc = r.kalanBorc != null ? r.kalanBorc : '—';
-            return (
-              '<strong>' + (r.ad || '') + '</strong>' +
-              '<div class="muted">Kalan borç: <strong>' + borc + '</strong>' +
-              (r.telefon ? ' · ' + r.telefon : '') + '</div>'
-            );
-          });
+          fillSupplierSelects(res.rows || []);
+          renderList('list-tedarikci', res.rows, debtItemHtml);
         })
         .withFailureHandler(function () {
           setMsg('msg-tedarikci', 'Tedarikçi listesi alınamadı.', false);
@@ -287,7 +410,11 @@
       formTed.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!hasGas()) {
-          setMsg('msg-tedarikci', 'Yalnızca Apps Script Web App içinde çalışır.', false);
+          setMsg(
+            'msg-tedarikci',
+            'Yalnızca Apps Script Web App içinde çalışır.',
+            false
+          );
           return;
         }
         var kayit = formValues(formTed);
@@ -315,6 +442,10 @@
           return;
         }
         var kayit = formValues(formFatura);
+        if (!kayit.tedarikci) {
+          setMsg('msg-fatura', 'Listeden tedarikçi seçin.', false);
+          return;
+        }
         google.script.run
           .withSuccessHandler(function (res) {
             setMsg('msg-fatura', res.message || '', !!res.ok);
@@ -339,6 +470,10 @@
           return;
         }
         var kayit = formValues(formOdeme);
+        if (!kayit.tedarikci) {
+          setMsg('msg-odeme', 'Listeden tedarikçi seçin.', false);
+          return;
+        }
         google.script.run
           .withSuccessHandler(function (res) {
             setMsg('msg-odeme', res.message || '', !!res.ok);
@@ -354,22 +489,128 @@
       });
     }
 
-    if (hasGas()) {
-      google.script.run
-        .withSuccessHandler(gosterOzet)
-        .withFailureHandler(function () {
-          hata('Bağlantı hatası. Sayfayı yenileyin.');
-        })
-        .getPanelData();
-    } else {
-      gosterOzet({
-        message: 'Merhaba Aqua Tekel',
-        role: 'misafir',
-        userEmail: '',
-        spreadsheetConfigured: false,
-        usesActiveSpreadsheet: true,
-        canWrite: false
+    var formLogin = document.getElementById('form-login');
+    if (formLogin) {
+      formLogin.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!hasGas()) {
+          setMsg(
+            'msg-login',
+            'Yalnızca Apps Script Web App içinde giriş yapılır.',
+            false
+          );
+          return;
+        }
+        var userId = loginUser && loginUser.value;
+        var code = loginCode && loginCode.value;
+        if (!userId) {
+          setMsg('msg-login', 'Kullanıcı seçin.', false);
+          return;
+        }
+        if (btnLogin) btnLogin.disabled = true;
+        google.script.run
+          .withSuccessHandler(function (res) {
+            if (btnLogin) btnLogin.disabled = false;
+            if (!res || !res.ok) {
+              setMsg(
+                'msg-login',
+                (res && res.message) || 'Giriş başarısız.',
+                false
+              );
+              return;
+            }
+            setMsg('msg-login', res.message || 'Giriş başarılı.', true);
+            if (loginCode) loginCode.value = '';
+            showApp(res.session);
+            loadOzet();
+          })
+          .withFailureHandler(function () {
+            if (btnLogin) btnLogin.disabled = false;
+            setMsg('msg-login', 'Giriş sırasında hata oluştu.', false);
+          })
+          .login(userId, code);
       });
     }
+
+    var btnLogout = document.getElementById('btn-logout');
+    if (btnLogout) {
+      btnLogout.addEventListener('click', function () {
+        if (!hasGas()) {
+          showLogin();
+          return;
+        }
+        google.script.run
+          .withSuccessHandler(function () {
+            showLogin();
+            setMsg('msg-login', 'Çıkış yapıldı.', true);
+            loadLoginUsers();
+          })
+          .withFailureHandler(function () {
+            showLogin();
+          })
+          .logout();
+      });
+    }
+
+    var btnForgot = document.getElementById('btn-forgot');
+    if (btnForgot) {
+      btnForgot.addEventListener('click', function () {
+        setMsg(
+          'msg-login',
+          'Test ortamı: kodlar Config.TEST_USERS içinde (ör. TEST1234). Canlı şifre yok.',
+          true
+        );
+      });
+    }
+
+    function loadLoginUsers() {
+      if (!hasGas()) {
+        fillLoginUsers([
+          { id: 'test-yalcin', ad: 'Yalçın Özeke' },
+          { id: 'test-sercan', ad: 'Sercan Toprak' },
+          { id: 'test-aleyna', ad: 'Aleyna Toprak' },
+          { id: 'test-fatih', ad: 'Fatih Toprak' }
+        ]);
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (res && res.ok) {
+            fillLoginUsers(res.users || []);
+          }
+        })
+        .withFailureHandler(function () {
+          setMsg('msg-login', 'Kullanıcı listesi alınamadı.', false);
+        })
+        .listUsersForLogin();
+    }
+
+    function boot() {
+      loadLoginUsers();
+      if (!hasGas()) {
+        showLogin();
+        setMsg(
+          'msg-login',
+          'Önizleme: Apps Script Web App’te giriş çalışır.',
+          true
+        );
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (res && res.loggedIn && res.session) {
+            showApp(res.session);
+            loadOzet();
+          } else {
+            showLogin();
+          }
+        })
+        .withFailureHandler(function () {
+          showLogin();
+        })
+        .getSession();
+    }
+
+    boot();
   })();
 </script>
