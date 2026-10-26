@@ -233,6 +233,18 @@ function seedIfEmpty() {
     const p = filePath(key);
     if (!fs.existsSync(p)) {
       writeJson(key, defaults[key]);
+      return;
+    }
+    // Boş users.json → giriş dropdown’u boş kalır; varsayılanları yaz.
+    if (key === 'users') {
+      try {
+        var existing = JSON.parse(fs.readFileSync(p, 'utf8'));
+        if (!Array.isArray(existing) || existing.length === 0) {
+          writeJson(key, defaults[key]);
+        }
+      } catch (e) {
+        writeJson(key, defaults[key]);
+      }
     }
   });
 }

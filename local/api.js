@@ -435,11 +435,15 @@ var handlers = {
     users.forEach(function (u) {
       if (u.aktif === false || !u.id || seen[u.id]) return;
       seen[u.id] = true;
-      out.push({ id: u.id, ad: u.ad || u.id });
+      out.push({
+        id: u.id,
+        ad: u.ad || u.id,
+        rol: u.rol || 'personel'
+      });
     });
     if (!out.length) {
       cfg.TEST_USERS.forEach(function (u) {
-        out.push({ id: u.id, ad: u.ad });
+        out.push({ id: u.id, ad: u.ad, rol: u.rol });
       });
     }
     return { ok: true, message: 'Tamam', users: out };
