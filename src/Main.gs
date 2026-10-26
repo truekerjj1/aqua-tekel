@@ -32,8 +32,9 @@ function showPanelOpenInstructions() {
       '   veya ilk kez: Deploy → New deployment → Web app\n' +
       '3) Execute as: Me · Who has access: Only myself\n' +
       '4) Açılan Web App linkine tıklayın.\n\n' +
-      'Beklenen ekran: Merhaba Aqua Tekel + Test ortamı\n\n' +
-      'Ayrıntılı adımlar: PANEL-KURULUM.md (GitHub deposunda).',
+      'Beklenen ekran: Güvenli giriş + TEST MODU rozeti\n' +
+      'Test kod örneği: TEST1234 (Config.TEST_USERS)\n\n' +
+      'Ayrıntılı adımlar: PANEL-GUNCELLEME.md / PANEL-KURULUM.md',
     ui.ButtonSet.OK
   );
 }
@@ -47,12 +48,13 @@ function doGet(e) {
   var cfg = getConfig();
   var template = HtmlService.createTemplateFromFile('ui/Index');
   template.brandName = cfg.BRAND_NAME;
+  template.brandSubtitle = cfg.BRAND_SUBTITLE || 'Cari işlem yönetimi';
   template.environmentLabel = cfg.ENVIRONMENT_LABEL;
   template.appInfoJson = JSON.stringify(getAppInfo());
 
   return template
     .evaluate()
-    .setTitle(cfg.BRAND_NAME + ' — ' + cfg.ENVIRONMENT_LABEL)
+    .setTitle(cfg.BRAND_NAME + ' — Test')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

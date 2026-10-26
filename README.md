@@ -4,28 +4,21 @@
 Canlı muhasebe dosyasına **bağlanmayın**.
 
 Test tablosu: **Aqua TEKEL TEST PROJESİ**  
-(Bu iskelette tablo ID’si yoktur. CRUD `getActiveSpreadsheet` kullanır; `YOUR_SPREADSHEET_ID` zorunlu değil.)
+(Bu iskelette tablo ID’si yoktur; `YOUR_SPREADSHEET_ID` yer tutucu.)
 
 Depo: [https://github.com/truekerjj1/aqua-tekel](https://github.com/truekerjj1/aqua-tekel)
 
 ---
 
-## Paneli kurmak (tek yol)
+## Paneli kurmak / güncellemek
 
-Adım adım kopyala-yapıştır rehberi:
+- İlk kurulum: **[PANEL-KURULUM.md](./PANEL-KURULUM.md)**
+- Giriş ekranı güncellemesi (yeniden yapıştırma sırası): **[docs/PANEL-GUNCELLEME.md](./docs/PANEL-GUNCELLEME.md)**
 
-**→ [PANEL-KURULUM.md](./PANEL-KURULUM.md)**
+Beklenen ilk ekran: **Güvenli giriş** + **TEST MODU** rozeti (açık yeşil-beyaz).  
+Test kodu örneği: `TEST1234` (`Config.TEST_USERS` — canlı şifre değil).
 
-Orada: Sheet → Uzantılar → Apps Script, her dosyanın nereye yapıştırılacağı, Web App (Only myself), beklenen ekran (**Merhaba Aqua Tekel** + **Test ortamı** + sekmeler).
-
-Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / panel talimatı.
-
----
-
-## PC kapalıyken / eve dönüş
-
-**Eve dönünce (Windows) adım adım:** [docs/EVE-DONUNCE.md](./docs/EVE-DONUNCE.md)  
-Kısa özet (PC kapalıyken ne yapıldı): [docs/PC-KAPALI-ILERLEME.md](./docs/PC-KAPALI-ILERLEME.md)
+Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / örnek veri / panel talimatı.
 
 ---
 
@@ -33,15 +26,12 @@ Kısa özet (PC kapalıyken ne yapıldı): [docs/PC-KAPALI-ILERLEME.md](./docs/P
 
 | Bölüm | Açıklama |
 |--------|----------|
-| `sheets/SEMASI.md` | Gelir–Gider–Tedarikçi–Fatura–Ödeme–Kullanıcı sütunları; kalan borç; çift kayıt |
 | `src/Main.gs` | Web App + tablo menüsü |
 | `src/Bootstrap.gs` | Test sayfalarını oluşturur (aktif tablo; ID yok) |
-| `src/Config.gs` | Sayfa adları, başlıklar, yetki e-posta listeleri (placeholder) |
-| `src/Auth.gs` | Patron / personel / misafir |
-| `src/Income.gs` / `Expense.gs` / `Suppliers.gs` | Sandbox CRUD (aktif tablo) |
-| `src/Invoices.gs` / `Payments.gs` | Fatura / ödeme CRUD; kalan borç güncellemesi |
-| `src/Dedup.gs` | Çift kayıt kontrolü |
-| `ui/` | Mobil panel: Özet / Gelir / Gider / Tedarikçi (+ fatura/ödeme formları) |
+| `src/Config.gs` | Ayarlar + `TEST_USERS` (test only kodlar) |
+| `src/Auth.gs` | Giriş / oturum / patron–personel |
+| `src/SampleData.gs` | Örnek test verisi |
+| `ui/` | Mobil panel HTML (giriş + sekmeler) |
 
 ---
 
@@ -49,8 +39,8 @@ Kısa özet (PC kapalıyken ne yapıldı): [docs/PC-KAPALI-ILERLEME.md](./docs/P
 
 - Canlı Spreadsheet / Script ID yazmayın.
 - Web App: **Only myself**.
+- Erişim kodları yalnızca sandbox (`TEST_USERS`); üretime taşımayın.
 - `.clasp.json` paylaşmayın (yalnızca `.clasp.json.example` vardır).
-- Config’deki `patron@example.com` / `personel@example.com` örnektir; gerçek hesap değildir.
 
 ---
 
@@ -60,14 +50,10 @@ Kısa özet (PC kapalıyken ne yapıldı): [docs/PC-KAPALI-ILERLEME.md](./docs/P
 aqua-tekel/
 ├── PANEL-KURULUM.md
 ├── README.md
+├── docs/PANEL-GUNCELLEME.md
 ├── appsscript.json
 ├── .clasp.json.example
 ├── .gitignore
-├── docs/
-│   ├── EVE-DONUNCE.md
-│   └── PC-KAPALI-ILERLEME.md
-├── sheets/
-│   └── SEMASI.md
 ├── src/
 │   ├── Main.gs
 │   ├── Bootstrap.gs

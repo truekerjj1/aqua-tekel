@@ -1,12 +1,14 @@
 /**
- * Aqua Tekel — yetki (sandbox)
+ * Aqua Tekel — yetki + panel oturumu (sandbox)
  *
- * Config.PATRON_EMAILS / Config.PERSONEL_EMAILS listelerini kullanır.
- * Örnek e-postalar placeholder’dır; gerçek hesap uydurulmaz.
+ * Config.TEST_USERS ile giriş (kullanıcı seç + kişisel erişim kodu).
+ * Config.PATRON_EMAILS / PERSONEL_EMAILS yedek (Google e-posta).
  *
- * Patron: tam yazma
+ * Patron: tam yazma + ayar / silme
  * Personel: gelir / gider / tedarikçi / fatura / ödeme yazabilir; silme / ayar yok
- * Misafir: salt okuma
+ * Misafir: salt okuma / giriş yok
+ *
+ * Erişim kodları test only — canlı şifre değildir.
  */
 
 var ROLLER = {
@@ -15,8 +17,13 @@ var ROLLER = {
   MISAFIR: 'misafir'
 };
 
+/** UserCache anahtarı — panel oturumu (test only). */
+var SESSION_CACHE_KEY = 'AQUA_TEKEL_SESSION';
+/** Oturum süresi: 6 saat */
+var SESSION_TTL_SEC = 21600;
+
 /**
- * Giriş yapan kullanıcının e-postasını alır.
+ * Giriş yapan Google kullanıcısının e-postasını alır.
  * @return {string}
  */
 function getCurrentUserEmail() {
@@ -56,11 +63,206 @@ function emailInList(email, liste) {
 }
 
 /**
- * Kullanıcının rolünü döndürür (Config listeleri).
+ * Panel oturumunu UserCache’ten okur.
+ * @return {{id: string, ad: string, rol: string}|null}
+ */
+function getSessionUser_() {
+  try {
+    var cache = CacheService.getUserCache();
+    var raw = cache.get(SESSION_CACHE_KEY);
+    if (!raw) {
+      return null;
+    }
+    var data = JSON.parse(raw);
+    if (!data || !data.id || !data.rol) {
+      return null;
+    }
+    return data;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Panel oturumunu yazar (test only).
+ * @param {{id: string, ad: string, rol: string}} session
+ */
+function setSessionUser_(session) {
+  var cache = CacheService.getUserCache();
+  cache.put(SESSION_CACHE_KEY, JSON.stringify(session), SESSION_TTL_SEC);
+}
+
+/**
+ * Panel oturumunu siler.
+ */
+function clearSessionUser_() {
+  try {
+    CacheService.getUserCache().remove(SESSION_CACHE_KEY);
+  } catch (e) {
+    // yok say
+  }
+}
+
+/**
+ * Config.TEST_USERS içinden id ile kullanıcı bulur.
+ * @param {string} userId
+ * @return {Object|null}
+ */
+function findTestUserById_(userId) {
+  var list = getConfig().TEST_USERS || [];
+  var id = String(userId || '').trim();
+  for (var i = 0; i < list.length; i++) {
+    if (String(list[i].id) === id) {
+      return list[i];
+    }
+  }
+  return null;
+}
+
+/**
+ * Giriş ekranı için kullanıcı listesi (kod yok).
+ * google.script.run → listUsersForLogin
+ * @return {{ok: boolean, message: string, users: Array<{id: string, ad: string}>}}
+ */
+function listUsersForLogin() {
+  var list = getConfig().TEST_USERS || [];
+  var users = [];
+  for (var i = 0; i < list.length; i++) {
+    var u = list[i];
+    users.push({
+      id: u.id,
+      ad: u.ad
+    });
+  }
+  return {
+    ok: true,
+    message: 'Tamam',
+    users: users
+  };
+}
+
+/**
+ * Kullanıcı + kişisel erişim kodu ile giriş (sandbox).
+ * google.script.run → login
+ * @param {string} userId
+ * @param {string} accessCode — test only
+ * @return {{ok: boolean, message: string, session: Object|null}}
+ */
+function login(userId, accessCode) {
+  var user = findTestUserById_(userId);
+  if (!user) {
+    return {
+      ok: false,
+      message: 'Kullanıcı seçin.',
+      session: null
+    };
+  }
+  var kod = String(accessCode || '').trim();
+  // test only: düz metin karşılaştırma (canlı hash/şifre yok)
+  if (!kod || kod !== String(user.kod || '')) {
+    return {
+      ok: false,
+      message: 'Erişim kodu hatalı. Test kodunu kontrol edin (ör. TEST1234).',
+      session: null
+    };
+  }
+  var session = {
+    id: user.id,
+    ad: user.ad,
+    rol: user.rol
+  };
+  setSessionUser_(session);
+  return {
+    ok: true,
+    message: 'Giriş başarılı. Merhaba ' + user.ad + '.',
+    session: buildPublicSession_(session)
+  };
+}
+
+/**
+ * Oturumu kapatır.
+ * google.script.run → logout
+ * @return {{ok: boolean, message: string}}
+ */
+function logout() {
+  clearSessionUser_();
+  return { ok: true, message: 'Çıkış yapıldı.' };
+}
+
+/**
+ * İstemciye güvenli oturum özeti (kod yok).
+ * @param {{id: string, ad: string, rol: string}} session
+ * @return {Object}
+ */
+function buildPublicSession_(session) {
+  var rol = session.rol || ROLLER.MISAFIR;
+  return {
+    id: session.id,
+    ad: session.ad,
+    rol: rol,
+    canWrite: rol === ROLLER.PATRON || rol === ROLLER.PERSONEL,
+    canManage: rol === ROLLER.PATRON
+  };
+}
+
+/**
+ * Mevcut panel oturumu (alias: session).
+ * google.script.run → getSession / session
+ * @return {{ok: boolean, loggedIn: boolean, session: Object|null, message: string}}
+ */
+function session() {
+  return getSession();
+}
+
+/**
+ * Mevcut panel oturumu.
+ * @return {{ok: boolean, loggedIn: boolean, session: Object|null, message: string}}
+ */
+function getSession() {
+  var sess = getSessionUser_();
+  if (!sess) {
+    return {
+      ok: true,
+      loggedIn: false,
+      session: null,
+      message: 'Oturum yok.'
+    };
+  }
+  // Kullanıcı Config’ten silindiyse oturumu düşür
+  var user = findTestUserById_(sess.id);
+  if (!user) {
+    clearSessionUser_();
+    return {
+      ok: true,
+      loggedIn: false,
+      session: null,
+      message: 'Oturum geçersiz.'
+    };
+  }
+  sess.ad = user.ad;
+  sess.rol = user.rol;
+  return {
+    ok: true,
+    loggedIn: true,
+    session: buildPublicSession_(sess),
+    message: 'Oturum açık.'
+  };
+}
+
+/**
+ * Kullanıcının rolünü döndürür: önce panel oturumu, yoksa e-posta listeleri.
  * @param {string=} email
  * @return {string} ROLLER değerlerinden biri
  */
 function getUserRole(email) {
+  var sess = getSessionUser_();
+  if (sess && sess.rol) {
+    if (sess.rol === ROLLER.PATRON ||
+        sess.rol === ROLLER.PERSONEL ||
+        sess.rol === ROLLER.MISAFIR) {
+      return sess.rol;
+    }
+  }
   email = email || getCurrentUserEmail();
   if (!email) {
     return ROLLER.MISAFIR;
@@ -136,12 +338,25 @@ function denyUnlessWriter() {
     return {
       ok: false,
       message:
-        'Yazma yetkisi yok. Config içinde PATRON_EMAILS veya PERSONEL_EMAILS ' +
-        'listesine kendi test e-postanızı ekleyin (örnek placeholder’ları değiştirin).'
+        'Yazma yetkisi yok. Önce panelden kullanıcı seçip test erişim kodu ile giriş yapın.'
     };
   }
   return {
     ok: false,
     message: 'Bu işlem için yazma yetkisi yok.'
+  };
+}
+
+/**
+ * Silme / ayar yalnızca patron.
+ * @return {{ok: boolean, message: string}|null} null = yetki var
+ */
+function denyUnlessManager() {
+  if (canManageSettings()) {
+    return null;
+  }
+  return {
+    ok: false,
+    message: 'Bu işlem yalnızca patron içindir. Personelde silme / ayar yok.'
   };
 }
