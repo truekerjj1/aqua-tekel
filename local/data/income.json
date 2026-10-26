@@ -1,0 +1,29 @@
+[
+  {
+    "tarih": "03.10.2026",
+    "tutar": 2400,
+    "aciklama": "Örnek satış — mağaza",
+    "kategori": "Satış",
+    "kaynak": "Nakit",
+    "not": "Örnek gelir",
+    "kullanici": "Fatih Toprak"
+  },
+  {
+    "tarih": "09.10.2026",
+    "tutar": 1100,
+    "aciklama": "Örnek satış — kart",
+    "kategori": "Satış",
+    "kaynak": "Kart",
+    "not": "Örnek gelir",
+    "kullanici": "Sercan Toprak"
+  },
+  {
+    "tarih": "15.10.2026",
+    "tutar": 350,
+    "aciklama": "Örnek diğer gelir",
+    "kategori": "Diğer",
+    "kaynak": "Havale",
+    "not": "Örnek gelir",
+    "kullanici": "Aleyna Toprak"
+  }
+]
