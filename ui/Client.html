@@ -23,6 +23,8 @@
     var formFatura = document.getElementById('form-fatura');
     var hintFatura = document.getElementById('hint-fatura');
     var currentSession = null;
+    var onayFiltre = 'Bekliyor';
+    var MAX_DEKONT = 5 * 1024 * 1024;
     var tabs = document.querySelectorAll('.tab');
     var panels = {
       ozet: document.getElementById('panel-ozet'),
@@ -30,12 +32,16 @@
       gider: document.getElementById('panel-gider'),
       odeme: document.getElementById('panel-odeme'),
       fatura: document.getElementById('panel-fatura'),
+      profil: document.getElementById('panel-profil'),
+      onay: document.getElementById('panel-onay'),
       tedarikci: document.getElementById('panel-tedarikci'),
+      yonetici: document.getElementById('panel-yonetici'),
       ayarlar: document.getElementById('panel-ayarlar')
     };
     var supplierSelectIds = [
       'select-fatura-tedarikci',
-      'select-odeme-tedarikci'
+      'select-odeme-tedarikci',
+      'select-admin-tedarikci'
     ];
 
     function hasGas() {
@@ -56,6 +62,24 @@
       if (n == null || isNaN(Number(n))) return '—';
       var x = Number(n);
       return (Math.round(x * 100) / 100).toLocaleString('tr-TR');
+    }
+
+    function escapeText(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function onayBadge(durum) {
+      if (!durum) return '';
+      var d = String(durum);
+      var cls = 'badge-durum';
+      if (d === 'Bekliyor') cls += ' is-wait';
+      else if (d === 'Onaylandi') cls += ' is-ok';
+      else if (d === 'Red') cls += ' is-err';
+      return '<span class="' + cls + '">' + escapeText(d) + '</span>';
     }
 
     function setMsg(id, text, ok) {
@@ -108,19 +132,18 @@
       if (ayarEl) {
         ayarEl.textContent = patron ? 'Açık (patron)' : 'Kapalı (personel)';
       }
-      // Fatura formu: patron + personel (tedarikçi ekleme hâlâ patron)
       if (formFatura) formFatura.hidden = !canWrite;
       if (hintFatura) {
         hintFatura.textContent = canWrite
-          ? 'Yeni fatura ekleyin. Tedarikçiyi listeden seçin.'
+          ? 'Yeni fatura ekleyin. Personel kayıtları onay kuyruğuna düşer.'
           : 'Fatura eklemek için giriş yapın.';
       }
 
-      // Personelde gizli sekmedeyse Özet’e dön
       var active = document.querySelector('.tab.is-active');
       if (active && active.hidden) {
         switchTab('ozet');
       }
+      if (patron) refreshOnayBadge();
     }
 
     function fillLoginUsers(users) {
@@ -142,7 +165,7 @@
 
     function realSupplierRows(rows) {
       return (rows || []).filter(function (r) {
-        return r && String(r.ad || '').trim();
+        return r && String(r.ad || '').trim() && r.aktif !== false;
       });
     }
 
@@ -152,10 +175,11 @@
         var sel = document.getElementById(id);
         if (!sel) return;
         var prev = sel.value;
+        var isAdmin = id === 'select-admin-tedarikci';
         sel.innerHTML = '';
         var opt0 = document.createElement('option');
         opt0.value = '';
-        opt0.textContent = 'Tedarikçi seçin';
+        opt0.textContent = isAdmin ? 'Tümü' : 'Tedarikçi seçin';
         sel.appendChild(opt0);
         real.forEach(function (r) {
           var ad = String(r.ad).trim();
@@ -176,15 +200,8 @@
         categories && categories.length
           ? categories
           : [
-              'Yemek',
-              'Mutfak',
-              'Temizlik',
-              'Market',
-              'Muhasebe',
-              'Kira',
-              'Elektrik',
-              'Su',
-              'Diğer'
+              'Yemek', 'Mutfak', 'Temizlik', 'Market', 'Muhasebe',
+              'Kira', 'Elektrik', 'Su', 'Diğer'
             ];
       sel.innerHTML = '';
       var opt0 = document.createElement('option');
@@ -203,16 +220,49 @@
 
     function debtItemHtml(r) {
       var phone = r.telefon ? String(r.telefon).trim() : '';
+      var actions = '';
+      if (isPatron(currentSession) && r.row) {
+        actions =
+          '<div class="row-actions">' +
+          '<button type="button" class="btn-sm" data-ted-edit="' +
+          r.row +
+          '">Düzenle</button> ' +
+          '<button type="button" class="btn-sm btn-danger" data-ted-del="' +
+          r.row +
+          '" data-ted-ad="' +
+          escapeText(r.ad || '') +
+          '">Sil</button>' +
+          '</div>';
+      }
       return (
         '<div class="debt-row">' +
         '<strong>' +
-        (r.ad || '') +
+        escapeText(r.ad || '') +
         '</strong>' +
         '<span class="borc-value">' +
         formatTutar(r.kalanBorc) +
         ' ₺</span>' +
         '</div>' +
-        (phone ? '<div class="muted">' + phone + '</div>' : '')
+        (phone ? '<div class="muted">' + escapeText(phone) + '</div>' : '') +
+        actions
+      );
+    }
+
+    function activityItemHtml(r) {
+      return (
+        '<strong>' +
+        escapeText(r.tip || '') +
+        '</strong> · ' +
+        formatTutar(r.tutar) +
+        ' ₺' +
+        (r.kullanici ? ' · ' + escapeText(r.kullanici) : '') +
+        ' ' +
+        onayBadge(r.onayDurum) +
+        '<div class="muted">' +
+        escapeText(r.tarih || '') +
+        ' · ' +
+        escapeText(r.ozet || '') +
+        '</div>'
       );
     }
 
@@ -236,7 +286,20 @@
         return;
       }
       listBorcOzet.hidden = false;
-      renderList('list-borc-ozet', items, debtItemHtml);
+      renderList('list-borc-ozet', items, function (r) {
+        var phone = r.telefon ? String(r.telefon).trim() : '';
+        return (
+          '<div class="debt-row">' +
+          '<strong>' +
+          escapeText(r.ad || '') +
+          '</strong>' +
+          '<span class="borc-value">' +
+          formatTutar(r.kalanBorc) +
+          ' ₺</span>' +
+          '</div>' +
+          (phone ? '<div class="muted">' + escapeText(phone) + '</div>' : '')
+        );
+      });
     }
 
     function gosterOzet(bilgi) {
@@ -298,7 +361,10 @@
       if (name === 'gider') loadGider();
       if (name === 'odeme') loadOdeme();
       if (name === 'fatura') loadFatura();
+      if (name === 'profil') loadProfil();
+      if (name === 'onay') loadOnay();
       if (name === 'tedarikci') loadTedarikci();
+      if (name === 'yonetici') loadYonetici();
     }
 
     function loadOzet() {
@@ -321,10 +387,60 @@
     function formValues(form) {
       var data = {};
       Array.prototype.forEach.call(form.elements, function (el) {
-        if (!el.name) return;
+        if (!el.name || el.type === 'file') return;
         data[el.name] = el.value;
       });
       return data;
+    }
+
+    function readFileAsDekont(fileInput, cb) {
+      var file = fileInput && fileInput.files && fileInput.files[0];
+      if (!file) {
+        cb(null);
+        return;
+      }
+      if (file.size > MAX_DEKONT) {
+        cb({ error: 'Dosya en fazla ~5 MB olmalı.' });
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function () {
+        var result = String(reader.result || '');
+        var comma = result.indexOf(',');
+        var b64 = comma >= 0 ? result.slice(comma + 1) : result;
+        cb({
+          base64: b64,
+          mimeType: file.type || 'application/octet-stream',
+          fileName: file.name || 'dekont'
+        });
+      };
+      reader.onerror = function () {
+        cb({ error: 'Dosya okunamadı.' });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function uploadThen(payload, onOk, onFail) {
+      if (!payload) {
+        onOk({ fileId: '', url: '' });
+        return;
+      }
+      if (payload.error) {
+        onFail(payload.error);
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.ok) {
+            onFail((res && res.message) || 'Dekont yüklenemedi.');
+            return;
+          }
+          onOk({ fileId: res.fileId || '', url: res.url || '' });
+        })
+        .withFailureHandler(function () {
+          onFail('Dekont yüklenemedi.');
+        })
+        .uploadDekont(payload);
     }
 
     function renderList(ulId, items, mapper) {
@@ -332,7 +448,6 @@
       if (!ul) return;
       ul.innerHTML = '';
       var list = items || [];
-      // Tedarikçi listelerinde boş ad / boş HTML satırı render etme
       if (ulId === 'list-tedarikci' || ulId === 'list-borc-ozet') {
         list = realSupplierRows(list);
       }
@@ -369,9 +484,14 @@
           setMsg('msg-gelir', '', true);
           renderList('list-gelir', res.rows, function (r) {
             return (
-              '<strong>' + (r.tutar != null ? r.tutar : '—') + '</strong> · ' +
-              (r.aciklama || '') +
-              '<div class="muted">' + (r.tarih || '') + ' · ' + (r.kategori || '') + '</div>'
+              '<strong>' + formatTutar(r.tutar) + '</strong> · ' +
+              escapeText(r.aciklama || '') +
+              '<div class="muted">' +
+              escapeText(r.tarih || '') +
+              ' · ' +
+              escapeText(r.kategori || '') +
+              (r.kullanici ? ' · ' + escapeText(r.kullanici) : '') +
+              '</div>'
             );
           });
         })
@@ -394,11 +514,12 @@
           setMsg('msg-gider', '', true);
           renderList('list-gider', res.rows, function (r) {
             return (
-              '<strong>' + (r.tutar != null ? r.tutar : '—') + '</strong> · ' +
-              (r.aciklama || '') +
+              '<strong>' + formatTutar(r.tutar) + '</strong> · ' +
+              escapeText(r.aciklama || '') +
               '<div class="muted">' +
-              (r.tarih || '') +
-              (r.kategori ? ' · ' + r.kategori : '') +
+              escapeText(r.tarih || '') +
+              (r.kategori ? ' · ' + escapeText(r.kategori) : '') +
+              (r.kullanici ? ' · ' + escapeText(r.kullanici) : '') +
               '</div>'
             );
           });
@@ -436,12 +557,19 @@
           }
           setMsg('msg-odeme', '', true);
           renderList('list-odeme', res.rows, function (r) {
+            var dekont = r.dekontUrl
+              ? ' · <a href="' + escapeText(r.dekontUrl) + '" target="_blank" rel="noopener">Dekont</a>'
+              : '';
             return (
-              '<strong>' + (r.tutar != null ? r.tutar : '—') + '</strong> · ' +
-              (r.tedarikci || '') +
+              '<strong>' + formatTutar(r.tutar) + '</strong> · ' +
+              escapeText(r.tedarikci || '') +
+              ' ' +
+              onayBadge(r.onayDurum) +
               '<div class="muted">' +
-              (r.tarih || '') +
-              (r.yontem ? ' · ' + r.yontem : '') +
+              escapeText(r.tarih || '') +
+              (r.yontem ? ' · ' + escapeText(r.yontem) : '') +
+              (r.yontem === 'Vadeli' ? ' (borç düşmez)' : '') +
+              dekont +
               '</div>'
             );
           });
@@ -464,16 +592,23 @@
           }
           setMsg('msg-fatura', '', true);
           renderList('list-fatura', res.rows, function (r) {
+            var dekont = r.dekontUrl
+              ? ' · <a href="' + escapeText(r.dekontUrl) + '" target="_blank" rel="noopener">Dekont</a>'
+              : '';
             return (
               '<strong>' +
-              (r.faturaNo || '') +
+              escapeText(r.faturaNo || '') +
               '</strong> · ' +
-              (r.tutar != null ? r.tutar : '—') +
+              formatTutar(r.tutar) +
+              ' ' +
+              onayBadge(r.onayDurum) +
               '<div class="muted">' +
-              (r.tarih || '') +
+              escapeText(r.tarih || '') +
               ' · ' +
-              (r.tedarikci || '') +
-              (r.durum ? ' · ' + r.durum : '') +
+              escapeText(r.tedarikci || '') +
+              (r.yontem ? ' · ' + escapeText(r.yontem) : '') +
+              (r.durum ? ' · ' + escapeText(r.durum) : '') +
+              dekont +
               '</div>'
             );
           });
@@ -494,6 +629,19 @@
         })
         .withFailureHandler(function () {})
         .listSuppliers();
+    }
+
+    function resetTedarikciForm() {
+      var form = document.getElementById('form-tedarikci');
+      var row = document.getElementById('tedarikci-row');
+      var title = document.getElementById('tedarikci-form-title');
+      var btn = document.getElementById('btn-tedarikci-kaydet');
+      var iptal = document.getElementById('btn-tedarikci-iptal');
+      if (form) form.reset();
+      if (row) row.value = '';
+      if (title) title.textContent = 'Yeni tedarikçi';
+      if (btn) btn.textContent = 'Tedarikçi ekle';
+      if (iptal) iptal.hidden = true;
     }
 
     function loadTedarikci() {
@@ -522,6 +670,452 @@
           setMsg('msg-tedarikci', 'Tedarikçi listesi alınamadı.', false);
         })
         .listSuppliers();
+    }
+
+    var listTedEl = document.getElementById('list-tedarikci');
+    if (listTedEl) {
+      listTedEl.addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t) return;
+        var edit = t.getAttribute('data-ted-edit');
+        var del = t.getAttribute('data-ted-del');
+        if (edit) {
+          google.script.run
+            .withSuccessHandler(function (res) {
+              if (!res || !res.ok) return;
+              var row = null;
+              (res.rows || []).forEach(function (r) {
+                if (String(r.row) === String(edit)) row = r;
+              });
+              if (!row) return;
+              var form = document.getElementById('form-tedarikci');
+              document.getElementById('tedarikci-row').value = row.row;
+              form.ad.value = row.ad || '';
+              form.telefon.value = row.telefon || '';
+              form.not.value = row.not || '';
+              document.getElementById('tedarikci-form-title').textContent =
+                'Tedarikçi düzenle';
+              document.getElementById('btn-tedarikci-kaydet').textContent =
+                'Kaydet';
+              document.getElementById('btn-tedarikci-iptal').hidden = false;
+            })
+            .listSuppliers();
+        }
+        if (del) {
+          var ad = t.getAttribute('data-ted-ad') || 'bu tedarikçi';
+          if (!window.confirm('“' + ad + '” pasifleştirilsin mi? (silme onayı)')) {
+            return;
+          }
+          google.script.run
+            .withSuccessHandler(function (res) {
+              setMsg('msg-tedarikci', res.message || '', !!res.ok);
+              if (res.ok) loadTedarikci();
+            })
+            .withFailureHandler(function () {
+              setMsg('msg-tedarikci', 'Silinemedi.', false);
+            })
+            .deleteSupplier(del);
+        }
+      });
+    }
+
+    var btnTedIptal = document.getElementById('btn-tedarikci-iptal');
+    if (btnTedIptal) {
+      btnTedIptal.addEventListener('click', resetTedarikciForm);
+    }
+
+    function loadProfil() {
+      if (!hasGas()) return;
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.ok) {
+            setMsg('msg-profil', (res && res.message) || 'Profil okunamadı.', false);
+            renderList('list-profil', [], null);
+            return;
+          }
+          setMsg('msg-profil', '', true);
+          renderList('list-profil', res.rows, activityItemHtml);
+        })
+        .withFailureHandler(function () {
+          setMsg('msg-profil', 'Son işlemler alınamadı.', false);
+        })
+        .getMyRecentActivity({ limit: 30 });
+    }
+
+    function refreshOnayBadge() {
+      if (!hasGas() || !isPatron(currentSession)) return;
+      google.script.run
+        .withSuccessHandler(function (res) {
+          var badge = document.getElementById('badge-onay');
+          if (!badge) return;
+          var n = (res && res.count) || 0;
+          badge.hidden = n < 1;
+          badge.textContent = String(n);
+        })
+        .withFailureHandler(function () {})
+        .countPendingApprovals();
+    }
+
+    function loadOnay() {
+      if (!hasGas() || !isPatron(currentSession)) return;
+      var filtre = onayFiltre ? { durum: onayFiltre } : {};
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.ok) {
+            setMsg('msg-onay', (res && res.message) || 'Onay listesi yok.', false);
+            renderList('list-onay', [], null);
+            return;
+          }
+          setMsg('msg-onay', '', true);
+          renderList('list-onay', res.rows, function (r) {
+            var actions = '';
+            if (r.durum === 'Bekliyor') {
+              actions =
+                '<div class="row-actions">' +
+                '<button type="button" class="btn-sm" data-onay-ok="' +
+                escapeText(r.id) +
+                '">Onayla</button> ' +
+                '<button type="button" class="btn-sm btn-danger" data-onay-red="' +
+                escapeText(r.id) +
+                '">Reddet</button>' +
+                '</div>';
+            }
+            return (
+              '<strong>' +
+              escapeText(r.tip || '') +
+              '</strong> ' +
+              onayBadge(r.durum) +
+              '<div class="muted">' +
+              escapeText(r.tarih || '') +
+              ' · ' +
+              escapeText(r.kullanici || '') +
+              '</div>' +
+              '<div>' +
+              escapeText(r.ozet || '') +
+              '</div>' +
+              actions
+            );
+          });
+          refreshOnayBadge();
+        })
+        .withFailureHandler(function () {
+          setMsg('msg-onay', 'Onay listesi alınamadı.', false);
+        })
+        .listApprovals(filtre);
+    }
+
+    document.querySelectorAll('[data-onay-filtre]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('[data-onay-filtre]').forEach(function (b) {
+          b.classList.remove('is-active');
+        });
+        btn.classList.add('is-active');
+        onayFiltre = btn.getAttribute('data-onay-filtre') || '';
+        loadOnay();
+      });
+    });
+
+    var listOnay = document.getElementById('list-onay');
+    if (listOnay) {
+      listOnay.addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t) return;
+        var okId = t.getAttribute('data-onay-ok');
+        var redId = t.getAttribute('data-onay-red');
+        if (okId) {
+          google.script.run
+            .withSuccessHandler(function (res) {
+              setMsg('msg-onay', res.message || '', !!res.ok);
+              loadOnay();
+            })
+            .decideApproval(okId, 'Onaylandi');
+        }
+        if (redId) {
+          google.script.run
+            .withSuccessHandler(function (res) {
+              setMsg('msg-onay', res.message || '', !!res.ok);
+              loadOnay();
+            })
+            .decideApproval(redId, 'Red');
+        }
+      });
+    }
+
+    function renderBarChart(elId, labels, values, title) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      if (!labels || !labels.length) {
+        el.innerHTML = '<p class="muted">' + escapeText(title) + ': veri yok</p>';
+        return;
+      }
+      var max = 0;
+      values.forEach(function (v) {
+        if (v > max) max = v;
+      });
+      if (max <= 0) max = 1;
+      var bars = '';
+      for (var i = 0; i < labels.length; i++) {
+        var h = Math.max(4, Math.round((values[i] / max) * 80));
+        bars +=
+          '<div class="chart-col">' +
+          '<div class="chart-bar" style="height:' +
+          h +
+          'px" title="' +
+          formatTutar(values[i]) +
+          '"></div>' +
+          '<span class="chart-label">' +
+          escapeText(labels[i].replace(/^\d{4}-/, '')) +
+          '</span>' +
+          '</div>';
+      }
+      el.innerHTML =
+        '<p class="chart-title">' +
+        escapeText(title) +
+        '</p><div class="chart-bars">' +
+        bars +
+        '</div>';
+    }
+
+    function loadYonetici() {
+      if (!hasGas() || !isPatron(currentSession)) return;
+      refreshSupplierOptions();
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.ok) return;
+          var g = document.getElementById('adm-gelir');
+          var x = document.getElementById('adm-gider');
+          var f = document.getElementById('adm-fatura');
+          var o = document.getElementById('adm-odeme');
+          if (g) g.textContent = formatTutar(res.gelir);
+          if (x) x.textContent = formatTutar(res.gider);
+          if (f) f.textContent = formatTutar(res.fatura);
+          if (o) o.textContent = formatTutar(res.odeme);
+        })
+        .getAdminTodaySummary();
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.ok) return;
+          renderBarChart('chart-fatura', res.labels, res.fatura, 'Aylık fatura');
+          renderBarChart('chart-odeme', res.labels, res.odeme, 'Aylık ödeme');
+        })
+        .getAdminMonthlyCharts();
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          renderList(
+            'list-admin-aktivite',
+            (res && res.rows) || [],
+            activityItemHtml
+          );
+        })
+        .getAdminRecentActivity({ limit: 40 });
+
+      loadAdminUsers();
+    }
+
+    function loadAdminUsers() {
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.ok) {
+            setMsg(
+              'msg-admin-user',
+              (res && res.message) || 'Kullanıcı listesi yok.',
+              false
+            );
+            return;
+          }
+          renderList('list-admin-users', res.rows, function (u) {
+            return (
+              '<div class="debt-row">' +
+              '<strong>' +
+              escapeText(u.ad || u.id) +
+              '</strong>' +
+              '<span class="muted">' +
+              escapeText(u.rol || '') +
+              (u.aktif ? '' : ' · pasif') +
+              '</span>' +
+              '</div>' +
+              '<div class="muted">id: ' +
+              escapeText(u.id) +
+              ' · kod (test only): ' +
+              escapeText(u.kod || '—') +
+              '</div>' +
+              '<div class="row-actions">' +
+              '<button type="button" class="btn-sm" data-user-edit="' +
+              escapeText(u.id) +
+              '">Düzenle</button> ' +
+              (u.aktif
+                ? '<button type="button" class="btn-sm btn-danger" data-user-del="' +
+                  escapeText(u.id) +
+                  '">Pasif</button>'
+                : '') +
+              '</div>'
+            );
+          });
+        })
+        .listUsersAdmin();
+    }
+
+    var listUsers = document.getElementById('list-admin-users');
+    if (listUsers) {
+      listUsers.addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t) return;
+        var editId = t.getAttribute('data-user-edit');
+        var delId = t.getAttribute('data-user-del');
+        if (editId) {
+          google.script.run
+            .withSuccessHandler(function (res) {
+              var u = null;
+              ((res && res.rows) || []).forEach(function (r) {
+                if (r.id === editId) u = r;
+              });
+              if (!u) return;
+              var form = document.getElementById('form-admin-user');
+              document.getElementById('user-edit-id').value = u.id;
+              document.getElementById('user-id').value = u.id;
+              document.getElementById('user-id').readOnly = true;
+              form.ad.value = u.ad || '';
+              form.rol.value = u.rol || 'personel';
+              form.kod.value = u.kod || '';
+              document.getElementById('btn-user-kaydet').textContent = 'Kaydet';
+              document.getElementById('btn-user-iptal').hidden = false;
+            })
+            .listUsersAdmin();
+        }
+        if (delId) {
+          if (!window.confirm('Kullanıcı pasifleştirilsin mi?')) return;
+          google.script.run
+            .withSuccessHandler(function (res) {
+              setMsg('msg-admin-user', res.message || '', !!res.ok);
+              loadAdminUsers();
+            })
+            .deactivateUserAdmin(delId);
+        }
+      });
+    }
+
+    var btnUserIptal = document.getElementById('btn-user-iptal');
+    if (btnUserIptal) {
+      btnUserIptal.addEventListener('click', function () {
+        var form = document.getElementById('form-admin-user');
+        form.reset();
+        document.getElementById('user-edit-id').value = '';
+        document.getElementById('user-id').readOnly = false;
+        document.getElementById('btn-user-kaydet').textContent = 'Kullanıcı ekle';
+        btnUserIptal.hidden = true;
+      });
+    }
+
+    var formAdminUser = document.getElementById('form-admin-user');
+    if (formAdminUser) {
+      formAdminUser.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!hasGas()) return;
+        var data = formValues(formAdminUser);
+        var editId = data.editId;
+        if (editId) {
+          google.script.run
+            .withSuccessHandler(function (res) {
+              setMsg('msg-admin-user', res.message || '', !!res.ok);
+              if (res.ok) {
+                formAdminUser.reset();
+                document.getElementById('user-edit-id').value = '';
+                document.getElementById('user-id').readOnly = false;
+                document.getElementById('btn-user-kaydet').textContent =
+                  'Kullanıcı ekle';
+                document.getElementById('btn-user-iptal').hidden = true;
+                loadAdminUsers();
+              }
+            })
+            .updateUserAdmin(editId, {
+              ad: data.ad,
+              rol: data.rol,
+              kod: data.kod
+            });
+        } else {
+          google.script.run
+            .withSuccessHandler(function (res) {
+              setMsg('msg-admin-user', res.message || '', !!res.ok);
+              if (res.ok) {
+                formAdminUser.reset();
+                loadAdminUsers();
+              }
+            })
+            .addUserAdmin({
+              id: data.id,
+              ad: data.ad,
+              rol: data.rol,
+              kod: data.kod
+            });
+        }
+      });
+    }
+
+    var formAdminFiltre = document.getElementById('form-admin-filtre');
+    if (formAdminFiltre) {
+      formAdminFiltre.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!hasGas()) return;
+        var data = formValues(formAdminFiltre);
+        google.script.run
+          .withSuccessHandler(function (res) {
+            if (!res || !res.ok) {
+              setMsg(
+                'msg-admin-filtre',
+                (res && res.message) || 'Filtre başarısız.',
+                false
+              );
+              return;
+            }
+            setMsg('msg-admin-filtre', 'Filtre uygulandı.', true);
+            var items = [];
+            (res.faturalar || []).forEach(function (r) {
+              items.push({
+                tip: 'fatura',
+                tarih: r.tarih,
+                tutar: r.tutar,
+                ozet: (r.faturaNo || '') + ' · ' + (r.tedarikci || ''),
+                kullanici: r.kullanici || '',
+                onayDurum: r.onayDurum || ''
+              });
+            });
+            (res.odemeler || []).forEach(function (r) {
+              items.push({
+                tip: 'odeme',
+                tarih: r.tarih,
+                tutar: r.tutar,
+                ozet: (r.tedarikci || '') + ' · ' + (r.yontem || ''),
+                kullanici: r.kullanici || '',
+                onayDurum: r.onayDurum || ''
+              });
+            });
+            (res.gelirler || []).forEach(function (r) {
+              items.push({
+                tip: 'gelir',
+                tarih: r.tarih,
+                tutar: r.tutar,
+                ozet: r.aciklama || '',
+                kullanici: r.kullanici || '',
+                onayDurum: ''
+              });
+            });
+            (res.giderler || []).forEach(function (r) {
+              items.push({
+                tip: 'gider',
+                tarih: r.tarih,
+                tutar: r.tutar,
+                ozet: (r.aciklama || '') + (r.kategori ? ' · ' + r.kategori : ''),
+                kullanici: r.kullanici || '',
+                onayDurum: ''
+              });
+            });
+            renderList('list-admin-filtre', items, activityItemHtml);
+          })
+          .getAdminFilteredReport(data);
+      });
     }
 
     var formGelir = document.getElementById('form-gelir');
@@ -597,18 +1191,38 @@
           return;
         }
         var kayit = formValues(formTed);
-        google.script.run
-          .withSuccessHandler(function (res) {
-            setMsg('msg-tedarikci', res.message || '', !!res.ok);
-            if (res.ok) {
-              formTed.reset();
-              loadTedarikci();
-            }
-          })
-          .withFailureHandler(function () {
-            setMsg('msg-tedarikci', 'Kayıt eklenemedi.', false);
-          })
-          .addSupplier(kayit);
+        var row = kayit.row;
+        if (row) {
+          google.script.run
+            .withSuccessHandler(function (res) {
+              setMsg('msg-tedarikci', res.message || '', !!res.ok);
+              if (res.ok) {
+                resetTedarikciForm();
+                loadTedarikci();
+              }
+            })
+            .withFailureHandler(function () {
+              setMsg('msg-tedarikci', 'Güncellenemedi.', false);
+            })
+            .updateSupplier(row, {
+              ad: kayit.ad,
+              telefon: kayit.telefon,
+              not: kayit.not
+            });
+        } else {
+          google.script.run
+            .withSuccessHandler(function (res) {
+              setMsg('msg-tedarikci', res.message || '', !!res.ok);
+              if (res.ok) {
+                resetTedarikciForm();
+                loadTedarikci();
+              }
+            })
+            .withFailureHandler(function () {
+              setMsg('msg-tedarikci', 'Kayıt eklenemedi.', false);
+            })
+            .addSupplier(kayit);
+        }
       });
     }
 
@@ -624,18 +1238,36 @@
           setMsg('msg-fatura', 'Listeden tedarikçi seçin.', false);
           return;
         }
-        google.script.run
-          .withSuccessHandler(function (res) {
-            setMsg('msg-fatura', res.message || '', !!res.ok);
-            if (res.ok) {
-              formFatura.reset();
-              loadFatura();
+        var fileEl = document.getElementById('file-fatura-dekont');
+        readFileAsDekont(fileEl, function (filePayload) {
+          if (filePayload && filePayload.error) {
+            setMsg('msg-fatura', filePayload.error, false);
+            return;
+          }
+          uploadThen(
+            filePayload,
+            function (dekont) {
+              kayit.dekontFileId = dekont.fileId;
+              kayit.dekontUrl = dekont.url;
+              google.script.run
+                .withSuccessHandler(function (res) {
+                  setMsg('msg-fatura', res.message || '', !!res.ok);
+                  if (res.ok) {
+                    formFatura.reset();
+                    loadFatura();
+                    refreshOnayBadge();
+                  }
+                })
+                .withFailureHandler(function () {
+                  setMsg('msg-fatura', 'Fatura eklenemedi.', false);
+                })
+                .addInvoice(kayit);
+            },
+            function (err) {
+              setMsg('msg-fatura', err, false);
             }
-          })
-          .withFailureHandler(function () {
-            setMsg('msg-fatura', 'Fatura eklenemedi.', false);
-          })
-          .addInvoice(kayit);
+          );
+        });
       });
     }
 
@@ -652,18 +1284,40 @@
           setMsg('msg-odeme', 'Listeden tedarikçi seçin.', false);
           return;
         }
-        google.script.run
-          .withSuccessHandler(function (res) {
-            setMsg('msg-odeme', res.message || '', !!res.ok);
-            if (res.ok) {
-              formOdeme.reset();
-              loadOdeme();
+        if (!kayit.yontem) {
+          setMsg('msg-odeme', 'Ödeme yöntemi seçin.', false);
+          return;
+        }
+        var fileEl = document.getElementById('file-odeme-dekont');
+        readFileAsDekont(fileEl, function (filePayload) {
+          if (filePayload && filePayload.error) {
+            setMsg('msg-odeme', filePayload.error, false);
+            return;
+          }
+          uploadThen(
+            filePayload,
+            function (dekont) {
+              kayit.dekontFileId = dekont.fileId;
+              kayit.dekontUrl = dekont.url;
+              google.script.run
+                .withSuccessHandler(function (res) {
+                  setMsg('msg-odeme', res.message || '', !!res.ok);
+                  if (res.ok) {
+                    formOdeme.reset();
+                    loadOdeme();
+                    refreshOnayBadge();
+                  }
+                })
+                .withFailureHandler(function () {
+                  setMsg('msg-odeme', 'Ödeme eklenemedi.', false);
+                })
+                .addPayment(kayit);
+            },
+            function (err) {
+              setMsg('msg-odeme', err, false);
             }
-          })
-          .withFailureHandler(function () {
-            setMsg('msg-odeme', 'Ödeme eklenemedi.', false);
-          })
-          .addPayment(kayit);
+          );
+        });
       });
     }
 
@@ -735,7 +1389,7 @@
       btnForgot.addEventListener('click', function () {
         setMsg(
           'msg-login',
-          'Test ortamı: kodlar Config.TEST_USERS içinde (ör. Fatih TEST4567, Sercan TEST2345). Canlı şifre yok.',
+          'Test ortamı: kodlar Config.TEST_USERS / Kullanicilar (ör. Fatih TEST4567, Sercan TEST2345). Canlı şifre yok.',
           true
         );
       });

@@ -19,6 +19,7 @@ Başlık satırları `Bootstrap.gs` / `Config.gs` ile aynı olmalıdır.
 | Kategori | Örn. Satış, Diğer |
 | Kaynak | Nakit / Kart / Havale vb. |
 | Not | İsteğe bağlı |
+| Kullanici | İşlemi yapan panel kullanıcısı |
 
 ### Gider
 
@@ -29,6 +30,7 @@ Başlık satırları `Bootstrap.gs` / `Config.gs` ile aynı olmalıdır.
 | Açıklama | Kısa metin |
 | Kategori | `CONFIG.GIDER_KATEGORILERI` — Yemek, Mutfak, Temizlik, Market, Muhasebe, Kira, Elektrik, Su, Diğer |
 | Not | İsteğe bağlı |
+| Kullanici | İşlemi yapan |
 
 > Gider **tedarikçi kullanmaz**. Tedarikçi borçları Faturalar − Ödemeler ile hesaplanır.
 
@@ -39,7 +41,8 @@ Başlık satırları `Bootstrap.gs` / `Config.gs` ile aynı olmalıdır.
 | Ad | Benzersiz tedarikçi adı (eşleştirme anahtarı) |
 | Telefon | İletişim |
 | Not | İsteğe bağlı |
-| KalanBorc | **Hesaplanan alan** — elle güvenilir kaynak değil (aşağıdaki kural) |
+| KalanBorc | **Hesaplanan alan** — elle güvenilir kaynak değil |
+| Aktif | Evet / Hayır (soft delete) |
 
 ### Faturalar
 
@@ -52,6 +55,11 @@ Başlık satırları `Bootstrap.gs` / `Config.gs` ile aynı olmalıdır.
 | Vade | Son ödeme tarihi |
 | Durum | Açık / Kısmi / Kapalı |
 | Not | İsteğe bağlı |
+| Yöntem | Nakit / Kredi kartı / Vadeli (girişte) |
+| Kullanici | İşlemi yapan |
+| OnayDurum | Bekliyor / Onaylandi / Red |
+| DekontFileId | Drive dosya id |
+| DekontUrl | Drive URL |
 
 ### Odemeler
 
@@ -59,34 +67,51 @@ Başlık satırları `Bootstrap.gs` / `Config.gs` ile aynı olmalıdır.
 |--------|----------|
 | Tarih | Ödeme tarihi |
 | Tedarikçi | `Tedarikçiler!Ad` |
-| Tutar | Ödenen tutar (borç azaltır) |
-| Yöntem | Nakit / Havale / Çek vb. |
-| FaturaNo | İsteğe bağlı; ilgili fatura |
+| Tutar | Ödenen / vadeli tutar |
+| Yöntem | **Nakit** / **Kredi kartı** / **Vadeli** |
+| FaturaNo | İsteğe bağlı |
 | Not | İsteğe bağlı |
+| Kullanici | İşlemi yapan |
+| OnayDurum | Bekliyor / Onaylandi / Red |
+| DekontFileId | Drive dosya id |
+| DekontUrl | Drive URL |
+
+### Onaylar
+
+| Sütun | Açıklama |
+|--------|----------|
+| Id | Benzersiz onay id |
+| Tip | fatura / odeme |
+| RefId | Satır numarası |
+| Kullanici | İşlemi yapan |
+| Tarih | Kayıt tarihi |
+| Durum | Bekliyor / Onaylandi / Red |
+| Ozet | Kısa özet |
 
 ### Kullanicilar
 
 | Sütun | Açıklama |
 |--------|----------|
-| E-posta | Google hesabı e-postası |
+| Id | Panel kullanıcı id (`test-fatih` …) |
+| E-posta | Placeholder / Google e-posta |
 | Rol | `patron` veya `personel` |
 | Ad | Görünen ad |
 | Aktif | Evet / Hayır |
+| Kod | Erişim kodu — **test only** (düz metin OK) |
 
-> Not: Sandbox yetkisi şimdilik `Config.gs` içindeki `PATRON_EMAILS` / `PERSONEL_EMAILS` listelerinden okunur. Bu sayfa ileride senkron için tutulur.
+> `Config.TEST_USERS` ile senkron. Kodlar sandbox kolaylığı içindir; üretime taşınmaz.
 
 ---
 
 ## Tedarikçi kalan borç kuralı
 
 ```
-KalanBorc(tedarikçi) = Σ Faturalar.Tutar(tedarikçi) − Σ Odemeler.Tutar(tedarikçi)
+KalanBorc(tedarikçi) = Σ Faturalar.Tutar − Σ Odemeler.Tutar(yöntem ∈ {Nakit, Kredi kartı})
 ```
 
-- Aynı **Ad** yazımı kullanılmalı (büyük/küçük harf ve boşluk farkı borç hesabını bozar).
-- `Tedarikçiler!KalanBorc` sütunu özet / bakiye içindir; resmi kaynak Faturalar − Odemeler toplamıdır.
-- `refreshSupplierBalances()` (Suppliers.gs) bu sütunu yeniden yazar; fatura/ödeme eklenince de çağrılır.
-- Negatif sonuç: fazla ödeme / avans (ileride ayrı işaretlenebilir).
+- **Vadeli** ödemeler kayda geçer ama borç düşümünde **sayılmaz**.
+- Aynı **Ad** yazımı kullanılmalı.
+- `refreshSupplierBalances()` fatura/ödeme eklenince çağrılır.
 
 ### CRUD dosyaları
 
@@ -94,27 +119,27 @@ KalanBorc(tedarikçi) = Σ Faturalar.Tutar(tedarikçi) − Σ Odemeler.Tutar(ted
 |--------|--------|--------------|
 | Faturalar | `src/Invoices.gs` | `addInvoice`, `listInvoices`, `updateInvoice` |
 | Odemeler | `src/Payments.gs` | `addPayment`, `listPayments`, `updatePayment` |
-| Tedarikçiler | `src/Suppliers.gs` | `computeSupplierBalance`, `refreshSupplierBalances`, … |
+| Tedarikçiler | `src/Suppliers.gs` | `addSupplier`, `updateSupplier`, `deleteSupplier`, … |
+| Onaylar | `src/Approvals.gs` | `listApprovals`, `decideApproval` |
+| Kullanicilar | `src/Users.gs` | `listUsersAdmin`, `addUserAdmin`, … |
+| Dekont | `src/Attachments.gs` | `uploadDekont`, `getDekontFolder` |
+| Yönetici | `src/Admin.gs` | `getAdminTodaySummary`, grafikler, filtre |
 
 ---
 
-## Çift kayıt anahtarı (öneri)
-
-`Dedup.gs` şu anahtarları kullanır:
+## Çift kayıt anahtarı
 
 | Tür | Anahtar |
 |-----|---------|
-| Gelir / Gider | `Tarih` + `Tutar` + `Açıklama` (normalize: trim, küçük harf) |
+| Gelir / Gider | `Tarih` + `Tutar` + `Açıklama` |
 | Fatura | `FaturaNo` + `Tedarikçi` |
-
-Aynı anahtar zaten varsa yeni kayıt eklenmez; Türkçe uyarı döner.
 
 ---
 
 ## Kurulum
 
 Tablo menüsü: **Aqua Tekel (Test)** → **Test sayfalarını kur**  
-veya `setupTestSheets()` çalıştırın. Eksik sayfalar ve başlık satırları oluşturulur.
+veya `setupTestSheets()`. Eksik sayfalar (Onaylar dahil) oluşturulur.
 
-Örnek satırlar: menü → **Örnek test verisi yükle** (`loadSampleTestData` in `src/SampleData.gs`).  
-Aktif tabloya 2–3 tedarikçi / fatura / ödeme / gelir / gider yazar; sonra `refreshSupplierBalances()` çağırır.
+Örnek satırlar: **Örnek test verisi yükle**.  
+Dekontlar: Drive `Aqua Tekel TEST / Dekontlar` (getOrCreate).

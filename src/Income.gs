@@ -43,7 +43,8 @@ function addIncome(kayit) {
     String(kayit.aciklama),
     kayit.kategori || '',
     kayit.kaynak || '',
-    kayit.not || ''
+    kayit.not || '',
+    currentActorLabel_()
   ]);
 
   return { ok: true, message: 'Gelir kaydı eklendi.' };
@@ -73,7 +74,8 @@ function listIncome(filtre) {
       aciklama: r[2],
       kategori: r[3],
       kaynak: r[4],
-      not: r[5]
+      not: r[5],
+      kullanici: r.length > 6 ? r[6] : ''
     };
     if (filtre.kategori && normalizeKeyPart(obj.kategori) !== normalizeKeyPart(filtre.kategori)) {
       continue;
@@ -111,20 +113,21 @@ function updateIncome(id, kayit) {
     return { ok: false, message: 'Gelir satırı bulunamadı.' };
   }
 
-  var existing = got.sheet.getRange(rowNum, 1, rowNum, 6).getValues()[0];
+  var existing = got.sheet.getRange(rowNum, 1, rowNum, 7).getValues()[0];
   var tarih = kayit.tarih !== undefined ? kayit.tarih : existing[0];
   var tutar = kayit.tutar !== undefined ? parseTutar(kayit.tutar) : existing[1];
   var aciklama = kayit.aciklama !== undefined ? kayit.aciklama : existing[2];
   var kategori = kayit.kategori !== undefined ? kayit.kategori : existing[3];
   var kaynak = kayit.kaynak !== undefined ? kayit.kaynak : existing[4];
   var not = kayit.not !== undefined ? kayit.not : existing[5];
+  var kullanici = kayit.kullanici !== undefined ? kayit.kullanici : existing[6];
 
   if (isNaN(parseTutar(tutar))) {
     return { ok: false, message: 'Geçersiz tutar.' };
   }
 
-  got.sheet.getRange(rowNum, 1, rowNum, 6).setValues([[
-    tarih, parseTutar(tutar), aciklama, kategori, kaynak, not
+  got.sheet.getRange(rowNum, 1, rowNum, 7).setValues([[
+    tarih, parseTutar(tutar), aciklama, kategori, kaynak, not, kullanici || ''
   ]]);
 
   return { ok: true, message: 'Gelir kaydı güncellendi.' };

@@ -1,10 +1,12 @@
-# Panel güncelleme — gider / fatura / tedarikçi listesi (Windows)
+# Panel güncelleme — yönetici / onay / ödeme yöntemi / dekont (Windows)
 
 Yalnızca **test**. Canlı muhasebe tablosuna bağlanmayın.  
 Tablo: **Aqua TEKEL TEST PROJESİ** → **Uzantılar → Apps Script**
 
 Bu turda değişen dosyaları **üzerine yazın** (silmeyin; içeriği tamamen yenileyin).  
 GitHub’da dosyaya tıklayın → **Raw** → tümünü kopyala → Apps Script’te yapıştır → kaydet.
+
+Yeni `.gs` dosyaları için: **+ → Script** ve adı tam yazın (`Approvals`, `Admin`, `Attachments`, `Users`).
 
 ---
 
@@ -15,42 +17,46 @@ GitHub’da dosyaya tıklayın → **Raw** → tümünü kopyala → Apps Script
 | 1 | `Config` | `src/Config.gs` |
 | 2 | `Auth` | `src/Auth.gs` |
 | 3 | `Bootstrap` | `src/Bootstrap.gs` |
-| 4 | `Expense` | `src/Expense.gs` |
-| 5 | `Invoices` | `src/Invoices.gs` |
-| 6 | `Suppliers` | `src/Suppliers.gs` |
-| 7 | `SampleData` | `src/SampleData.gs` |
-| 8 | `Main` | `src/Main.gs` |
-| 9 | `ui/Styles` | `ui/Styles.html` |
-| 10 | `ui/Index` | `ui/Index.html` |
-| 11 | `ui/Client` | `ui/Client.html` |
+| 4 | `Utils` | `src/Utils.gs` |
+| 5 | `Income` | `src/Income.gs` |
+| 6 | `Expense` | `src/Expense.gs` |
+| 7 | `Suppliers` | `src/Suppliers.gs` |
+| 8 | `Invoices` | `src/Invoices.gs` |
+| 9 | `Payments` | `src/Payments.gs` |
+| 10 | `Approvals` | `src/Approvals.gs` **(yeni)** |
+| 11 | `Attachments` | `src/Attachments.gs` **(yeni)** |
+| 12 | `Users` | `src/Users.gs` **(yeni)** |
+| 13 | `Admin` | `src/Admin.gs` **(yeni)** |
+| 14 | `SampleData` | `src/SampleData.gs` |
+| 15 | `Main` | `src/Main.gs` |
+| 16 | `ui/Styles` | `ui/Styles.html` |
+| 17 | `ui/Index` | `ui/Index.html` |
+| 18 | `ui/Client` | `ui/Client.html` |
 
-`ui/...` adını **tam böyle** yazın (eğik çizgi dahil). HTML yoksa: **+ → HTML**.
-
-`Styles` değişmediyse bile Index/Client ile birlikte kontrol edin.
+`ui/...` adını **tam böyle** yazın. HTML yoksa: **+ → HTML**.
 
 ---
 
-## Gider sayfası başlığı (önemli)
+## Sheet başlıkları (önemli)
 
-Eski Gider sekmesinde **Tedarikçi** sütunu varsa:
+Eski sekmelerde sütun eksikse:
 
-1. Test tablosunda **Gider** sayfasını silin **veya** 1. satırı  
-   `Tarih | Tutar | Açıklama | Kategori | Not` olacak şekilde düzeltin  
-2. Menü → **Aqua Tekel (Test)** → **Test sayfalarını kur** (eksikse oluşturur)  
+1. Menü → **Aqua Tekel (Test)** → **Test sayfalarını kur** (yeni `Onaylar` sayfası)
+2. Mevcut sayfaların 1. satırını `sheets/SEMASI.md` / `Config.HEADERS` ile hizalayın **veya** ilgili sayfayı silip yeniden kurun
 3. İsteğe bağlı: **Örnek test verisi yükle**
 
-Yeni şema tedarikçi sütunu kullanmaz; kategori zorunlu.
+Yeni / genişleyen alanlar: `Kullanici`, `OnayDurum`, `Yöntem` (fatura), `Aktif` (tedarikçi), `Dekont*`, `Onaylar` sayfası, `Kullanicilar` → Id + Kod (test only).
 
 ---
 
 ## Sonra
 
-1. Kaydet → tabloyu yenile → menü **Aqua Tekel (Test)** → isteğe bağlı **Örnek test verisi yükle**
-2. **Deploy → Manage deployments → Edit (kalem) → New version → Deploy**  
-   (veya ilk kez: New deployment → Web app · **Me** · **Only myself**)
+1. Kaydet → tabloyu yenile → menü **Test sayfalarını kur** → **Örnek test verisi yükle**
+2. **Deploy → Manage deployments → Edit → New version → Deploy**  
+   (Web App: **Me** · **Only myself**)
 3. Web App linkini açın
 
-**Beklenen:** personel fatura formu görür · giderde kategori select · tedarikçi listesinde boş satır yok
+**Beklenen:** ödeme yöntemi select · vadeli borç düşmez · personel onaya düşer · patron Onay / Yönetici · dekont yükleme · profil son işlemler · CSS grafik
 
 ---
 
@@ -58,18 +64,24 @@ Yeni şema tedarikçi sütunu kullanmaz; kategori zorunlu.
 
 | | Patron | Personel |
 |--|--------|----------|
-| Gelir / Gider / Ödeme | evet | evet |
-| Fatura ekle | evet | **evet** |
-| Tedarikçi sekmesi | evet | **yok** |
-| Ayarlar | evet | **yok** |
+| Gelir / Gider / Ödeme / Fatura | evet | evet |
+| Profil (son işlemler) | evet | evet |
+| Tedarikçi düzenle / sil | evet | **yok** |
+| Onay kuyruğu | evet | **yok** |
+| Yönetici paneli | evet | **yok** |
 
-Sunucu da kontrol eder. Tedarikçi ekleme hâlâ yalnız patron.
+---
+
+## Ödeme yöntemleri
+
+- **Nakit / Kredi kartı** → gerçek ödeme; `kalanBorc` azalır  
+- **Vadeli** → cari işlem kaydı; borç hesabında ödeme **sayılmaz**
+
+Dekont: Drive `Aqua Tekel TEST / Dekontlar` (getOrCreate). Max ~5 MB. URL sheet’e yazılır.
 
 ---
 
 ## Test kodları (sandbox — canlı değil)
-
-`Config.TEST_USERS`:
 
 | Kullanıcı | Rol | Kod |
 |-----------|-----|-----|

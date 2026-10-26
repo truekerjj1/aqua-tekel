@@ -2,11 +2,13 @@
  * Aqua Tekel — tedarikçiler (sandbox CRUD)
  *
  * Aktif tabloya yazar. KalanBorc (Bakiye) = Faturalar − Odemeler (aynı Ad).
- * YOUR_SPREADSHEET_ID zorunlu değildir; canlı ID kullanılmaz.
+ * Vadeli ödemeler borç düşümünde sayılmaz (isDebtReducingPayment).
+ * Soft delete: Aktif=Hayır. YOUR_SPREADSHEET_ID zorunlu değildir.
  */
 
 /**
- * Tedarikçi için kalan borç hesaplar (Faturalar tutar toplamı − Ödemeler tutar toplamı).
+ * Tedarikçi için kalan borç hesaplar.
+ * Faturalar tutar − (Nakit/KK ödemeler). Vadeli ödemeler hariç.
  * @param {string} ad
  * @param {Spreadsheet} ss
  * @return {number}
@@ -39,8 +41,12 @@ function computeSupplierBalance(ad, ss) {
     var oRows = getDataRows(odemeler);
     for (i = 0; i < oRows.length; i++) {
       r = oRows[i];
-      // Tarih, Tedarikçi, Tutar, ...
+      // Tarih, Tedarikçi, Tutar, Yöntem, ...
       if (normalizeKeyPart(r[1]) === key) {
+        // Vadeli → ödeme sayma (borç düşmez)
+        if (!isDebtReducingPayment(r[3])) {
+          continue;
+        }
         var ot = parseTutar(r[2]);
         if (!isNaN(ot)) {
           odenen += ot;
@@ -129,6 +135,21 @@ function addSupplier(tedarikci) {
   var rows = getDataRows(got.sheet);
   for (var i = 0; i < rows.length; i++) {
     if (normalizeKeyPart(rows[i][0]) === normalizeKeyPart(ad)) {
+      // Pasif ise yeniden aktifleştir
+      var aktifVal = rows[i].length > 4 ? rows[i][4] : 'Evet';
+      if (!isActiveFlag_(aktifVal)) {
+        var rowNum = i + 2;
+        got.sheet.getRange(rowNum, 5).setValue('Evet');
+        if (tedarikci.telefon !== undefined) {
+          got.sheet.getRange(rowNum, 2).setValue(tedarikci.telefon);
+        }
+        if (tedarikci.not !== undefined) {
+          got.sheet.getRange(rowNum, 3).setValue(tedarikci.not);
+        }
+        var kalanRe = computeSupplierBalance(ad, got.ss);
+        got.sheet.getRange(rowNum, 4).setValue(kalanRe);
+        return { ok: true, message: 'Pasif tedarikçi yeniden aktifleştirildi.' };
+      }
       return {
         ok: false,
         message: 'Bu tedarikçi adı zaten var: ' + ad
@@ -141,7 +162,8 @@ function addSupplier(tedarikci) {
     ad,
     tedarikci.telefon || '',
     tedarikci.not || '',
-    kalan
+    kalan,
+    'Evet'
   ]);
 
   return { ok: true, message: 'Tedarikçi eklendi.' };
@@ -149,9 +171,11 @@ function addSupplier(tedarikci) {
 
 /**
  * Tedarikçi listesini döndürür (KalanBorc güncel hesaplanır).
+ * @param {Object=} opts — {includeInactive: boolean}
  * @return {{ok: boolean, message: string, rows: Array<Object>}}
  */
-function listSuppliers() {
+function listSuppliers(opts) {
+  opts = opts || {};
   var cfg = getConfig();
   var got = getSandboxSheet(cfg.SHEETS.TEDARIKCILER);
   if (!got.ok) {
@@ -169,13 +193,18 @@ function listSuppliers() {
     if (!ad) {
       continue;
     }
+    var aktif = r.length > 4 ? isActiveFlag_(r[4]) : true;
+    if (!opts.includeInactive && !aktif) {
+      continue;
+    }
     var kalan = computeSupplierBalance(ad, got.ss);
     rows.push({
       row: i + 2,
       ad: ad,
       telefon: r[1],
       not: r[2],
-      kalanBorc: kalan
+      kalanBorc: kalan,
+      aktif: aktif
     });
   }
   return { ok: true, message: 'Tamam', rows: rows };
@@ -210,10 +239,13 @@ function updateSupplier(id, tedarikci) {
     return { ok: false, message: 'Tedarikçi satırı bulunamadı.' };
   }
 
-  var existing = got.sheet.getRange(rowNum, 1, rowNum, 4).getValues()[0];
+  var existing = got.sheet.getRange(rowNum, 1, rowNum, 5).getValues()[0];
   var ad = tedarikci.ad !== undefined ? String(tedarikci.ad).trim() : existing[0];
   var telefon = tedarikci.telefon !== undefined ? tedarikci.telefon : existing[1];
   var not = tedarikci.not !== undefined ? tedarikci.not : existing[2];
+  var aktif = tedarikci.aktif !== undefined
+    ? (tedarikci.aktif ? 'Evet' : 'Hayır')
+    : (existing[4] != null && existing[4] !== '' ? existing[4] : 'Evet');
 
   if (!ad) {
     return { ok: false, message: 'Tedarikçi adı boş olamaz.' };
@@ -231,7 +263,22 @@ function updateSupplier(id, tedarikci) {
   }
 
   var kalan = computeSupplierBalance(ad, got.ss);
-  got.sheet.getRange(rowNum, 1, rowNum, 4).setValues([[ad, telefon, not, kalan]]);
+  got.sheet.getRange(rowNum, 1, rowNum, 5).setValues([[
+    ad, telefon, not, kalan, aktif
+  ]]);
 
   return { ok: true, message: 'Tedarikçi güncellendi.' };
+}
+
+/**
+ * Soft delete — Aktif=Hayır (onaylı silme UI’da).
+ * @param {string|number} id — satır numarası
+ * @return {{ok: boolean, message: string}}
+ */
+function deleteSupplier(id) {
+  var denied = denyUnlessSupplierManager();
+  if (denied) {
+    return denied;
+  }
+  return updateSupplier(id, { aktif: false });
 }

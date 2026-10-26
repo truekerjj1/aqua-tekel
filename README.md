@@ -13,12 +13,12 @@ Depo: [https://github.com/truekerjj1/aqua-tekel](https://github.com/truekerjj1/a
 ## Paneli kurmak / güncellemek
 
 - İlk kurulum: **[PANEL-KURULUM.md](./PANEL-KURULUM.md)**
-- Yetki + UI güncellemesi (Windows yapıştırma sırası): **[docs/PANEL-GUNCELLEME.md](./docs/PANEL-GUNCELLEME.md)**
+- Yönetici / onay / ödeme yöntemi / dekont: **[docs/PANEL-GUNCELLEME.md](./docs/PANEL-GUNCELLEME.md)**
 
 Beklenen ilk ekran: **Güvenli giriş** + **TEST MODU** rozeti (açık yeşil mobil Web App).  
 Test: Fatih `TEST4567` (patron) · Sercan `TEST2345` (personel) — `Config.TEST_USERS` (canlı şifre değil).
 
-**Yetki:** Tedarikçi / fatura ekleme / ayar → yalnız **patron**. Personel gelir, gider, ödeme (tedarikçi dropdown) yapar; tedarikçi kaydı oluşturamaz. Kontroller sunucuda (`Auth.gs`).
+**Yetki:** Yönetici / onay / tedarikçi düzenle-sil → yalnız **patron**. Personel gelir, gider, ödeme, fatura ekler (onaya düşer); profilinde son işlemlerini görür.
 
 Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / örnek veri / panel talimatı.
 
@@ -29,11 +29,15 @@ Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / örnek veri /
 | Bölüm | Açıklama |
 |--------|----------|
 | `src/Main.gs` | Web App + tablo menüsü |
-| `src/Bootstrap.gs` | Test sayfalarını oluşturur (aktif tablo; ID yok) |
-| `src/Config.gs` | Ayarlar + `TEST_USERS` (test only kodlar) |
+| `src/Bootstrap.gs` | Test sayfalarını oluşturur (Onaylar dahil) |
+| `src/Config.gs` | Ayarlar + `TEST_USERS` + ödeme yöntemleri |
 | `src/Auth.gs` | Giriş / oturum / patron–personel |
+| `src/Approvals.gs` | Onay kuyruğu |
+| `src/Admin.gs` | Yönetici özet / filtre / grafik |
+| `src/Attachments.gs` | Dekont → Drive |
+| `src/Users.gs` | Kullanıcı yönetimi + sheet senkron |
 | `src/SampleData.gs` | Örnek test verisi |
-| `ui/` | Mobil panel HTML (giriş + sekmeler) |
+| `ui/` | Mobil panel HTML |
 
 ---
 
@@ -41,7 +45,7 @@ Tablo menüsü: **Aqua Tekel (Test)** → test sayfalarını kur / örnek veri /
 
 - Canlı Spreadsheet / Script ID yazmayın.
 - Web App: **Only myself**.
-- Erişim kodları yalnızca sandbox (`TEST_USERS`); üretime taşımayın.
+- Erişim kodları yalnızca sandbox (`TEST_USERS` / sheet Kod — test only).
 - `.clasp.json` paylaşmayın (yalnızca `.clasp.json.example` vardır).
 
 ---
@@ -56,21 +60,12 @@ aqua-tekel/
 ├── appsscript.json
 ├── .clasp.json.example
 ├── .gitignore
+├── sheets/SEMASI.md
 ├── src/
-│   ├── Main.gs
-│   ├── Bootstrap.gs
-│   ├── Config.gs
-│   ├── Auth.gs
-│   ├── Income.gs
-│   ├── Expense.gs
-│   ├── Suppliers.gs
-│   ├── Invoices.gs
-│   ├── Payments.gs
-│   ├── SampleData.gs
-│   ├── Dedup.gs
-│   └── Utils.gs
+│   ├── Main.gs, Bootstrap.gs, Config.gs, Auth.gs, Utils.gs
+│   ├── Income.gs, Expense.gs, Suppliers.gs, Invoices.gs, Payments.gs
+│   ├── Approvals.gs, Attachments.gs, Users.gs, Admin.gs
+│   ├── SampleData.gs, Dedup.gs
 └── ui/
-    ├── Index.html
-    ├── Styles.html
-    └── Client.html
+    ├── Index.html, Styles.html, Client.html
 ```

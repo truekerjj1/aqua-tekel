@@ -15,6 +15,12 @@ var CONFIG = {
   BRAND_NAME: 'AQUA TEKEL',
   BRAND_SUBTITLE: 'Cari işlem yönetimi',
 
+  /** Drive dekont klasör yolu (script’in bağlı Drive’ı). */
+  DEKONT_FOLDER_PATH: ['Aqua Tekel TEST', 'Dekontlar'],
+
+  /** Dekont yükleme üst sınırı (bayt) — UI ~5MB uyarısı. */
+  DEKONT_MAX_BYTES: 5 * 1024 * 1024,
+
   // Sayfa (sekme) adları — sheets/SEMASI.md ile uyumlu
   SHEETS: {
     GELIR: 'Gelir',
@@ -22,19 +28,40 @@ var CONFIG = {
     TEDARIKCILER: 'Tedarikçiler',
     FATURALAR: 'Faturalar',
     ODEMELER: 'Odemeler',
-    KULLANICILAR: 'Kullanicilar'
+    KULLANICILAR: 'Kullanicilar',
+    ONAYLAR: 'Onaylar'
   },
 
   // Başlık satırları — Bootstrap.gs TEST_SAYFALARI ile aynı olmalı
   HEADERS: {
-    GELIR: ['Tarih', 'Tutar', 'Açıklama', 'Kategori', 'Kaynak', 'Not'],
+    GELIR: ['Tarih', 'Tutar', 'Açıklama', 'Kategori', 'Kaynak', 'Not', 'Kullanici'],
     // Gider tedarikçi kullanmaz — kategori seçimi (GIDER_KATEGORILERI)
-    GIDER: ['Tarih', 'Tutar', 'Açıklama', 'Kategori', 'Not'],
-    TEDARIKCILER: ['Ad', 'Telefon', 'Not', 'KalanBorc'],
-    FATURALAR: ['FaturaNo', 'Tarih', 'Tedarikçi', 'Tutar', 'Vade', 'Durum', 'Not'],
-    ODEMELER: ['Tarih', 'Tedarikçi', 'Tutar', 'Yöntem', 'FaturaNo', 'Not'],
-    // Kod sütunu sheet’te tutulmaz; erişim kodları yalnızca CONFIG.TEST_USERS (test only).
-    KULLANICILAR: ['E-posta', 'Rol', 'Ad', 'Aktif']
+    GIDER: ['Tarih', 'Tutar', 'Açıklama', 'Kategori', 'Not', 'Kullanici'],
+    TEDARIKCILER: ['Ad', 'Telefon', 'Not', 'KalanBorc', 'Aktif'],
+    FATURALAR: [
+      'FaturaNo', 'Tarih', 'Tedarikçi', 'Tutar', 'Vade', 'Durum', 'Not',
+      'Yöntem', 'Kullanici', 'OnayDurum', 'DekontFileId', 'DekontUrl'
+    ],
+    ODEMELER: [
+      'Tarih', 'Tedarikçi', 'Tutar', 'Yöntem', 'FaturaNo', 'Not',
+      'Kullanici', 'OnayDurum', 'DekontFileId', 'DekontUrl'
+    ],
+    // Kod sütunu test only — düz metin sandbox; üretime taşınmaz.
+    KULLANICILAR: ['Id', 'E-posta', 'Rol', 'Ad', 'Aktif', 'Kod'],
+    ONAYLAR: ['Id', 'Tip', 'RefId', 'Kullanici', 'Tarih', 'Durum', 'Ozet']
+  },
+
+  /**
+   * Ödeme yöntemleri (fatura + ödeme formları).
+   * Nakit / Kredi kartı → gerçek ödeme (borç azalır).
+   * Vadeli → cari işlem kaydı; kalanBorc hesabında ödeme sayılmaz.
+   */
+  ODEME_YONTEMLERI: ['Nakit', 'Kredi kartı', 'Vadeli'],
+
+  ONAY_DURUM: {
+    BEKLIYOR: 'Bekliyor',
+    ONAYLANDI: 'Onaylandi',
+    RED: 'Red'
   },
 
   /**
@@ -56,7 +83,7 @@ var CONFIG = {
   /**
    * Yetki listeleri — örnek placeholder (gerçek hesap değil).
    * Eve dönünce kendi Google e-postalarınızla değiştirin.
-   * Panel girişi için asıl kaynak: TEST_USERS (aşağıda).
+   * Panel girişi için asıl kaynak: TEST_USERS + Kullanicilar sheet.
    */
   PATRON_EMAILS: [
     'patron@example.com'
@@ -70,6 +97,7 @@ var CONFIG = {
    * test only — canlı şifre / gerçek erişim kodu değil; uydurma canlı kod yok.
    * Kodlar düz metin (sandbox kolaylığı); üretime taşınmaz.
    * Örnek test: Fatih Toprak + TEST4567 (patron) · Sercan Toprak + TEST2345 (personel).
+   * Kullanicilar sheet ile senkron (SampleData / Users.gs).
    */
   TEST_USERS: [
     { id: 'test-yalcin', ad: 'Yalçın Özeke', rol: 'patron', kod: 'TEST1234' },
@@ -95,4 +123,30 @@ function getConfig() {
 function isSpreadsheetConfigured() {
   return CONFIG.SPREADSHEET_ID &&
     CONFIG.SPREADSHEET_ID !== 'YOUR_SPREADSHEET_ID';
+}
+
+/**
+ * Ödeme yöntemi normalize (karşılaştırma).
+ * @param {*} yontem
+ * @return {string}
+ */
+function normalizeOdemeYontemi(yontem) {
+  var s = String(yontem || '').trim().toLowerCase();
+  if (s === 'nakit') return 'Nakit';
+  if (s === 'kredi kartı' || s === 'kredi karti' || s === 'kk' || s === 'kart') {
+    return 'Kredi kartı';
+  }
+  if (s === 'vadeli') return 'Vadeli';
+  return String(yontem || '').trim();
+}
+
+/**
+ * Gerçek ödeme mi? (kalanBorc’tan düşülür)
+ * Vadeli ödeme sayılmaz.
+ * @param {*} yontem
+ * @return {boolean}
+ */
+function isDebtReducingPayment(yontem) {
+  var n = normalizeOdemeYontemi(yontem);
+  return n === 'Nakit' || n === 'Kredi kartı';
 }

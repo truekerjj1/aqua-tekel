@@ -29,10 +29,11 @@ function loadSampleTestData() {
     odeme: 0,
     gelir: 0,
     gider: 0,
-    kullanici: 0
+    kullanici: 0,
+    onay: 0
   };
 
-  // test only — sheet’te kod yok; yalnızca ad/rol (Config.TEST_USERS ile uyumlu örnek)
+  // test only — Kullanicilar sheet + Config.TEST_USERS senkron (kod sheet’te)
   added.kullanici = seedTestUsers_(ss, cfg);
 
   var tedarikciler = [
@@ -49,7 +50,10 @@ function loadSampleTestData() {
       tutar: 1500,
       vade: '15.10.2026',
       durum: 'Açık',
-      not: 'Örnek fatura'
+      not: 'Örnek fatura',
+      yontem: 'Vadeli',
+      kullanici: 'Fatih Toprak',
+      onayDurum: 'Onaylandi'
     },
     {
       faturaNo: 'ORNEK-F002',
@@ -58,7 +62,10 @@ function loadSampleTestData() {
       tutar: 820,
       vade: '20.10.2026',
       durum: 'Açık',
-      not: 'Örnek fatura'
+      not: 'Örnek fatura',
+      yontem: 'Nakit',
+      kullanici: 'Sercan Toprak',
+      onayDurum: 'Onaylandi'
     },
     {
       faturaNo: 'ORNEK-F003',
@@ -67,7 +74,10 @@ function loadSampleTestData() {
       tutar: 450,
       vade: '25.10.2026',
       durum: 'Açık',
-      not: 'Örnek fatura'
+      not: 'Örnek fatura',
+      yontem: 'Kredi kartı',
+      kullanici: 'Fatih Toprak',
+      onayDurum: 'Onaylandi'
     }
   ];
 
@@ -76,17 +86,31 @@ function loadSampleTestData() {
       tarih: '08.10.2026',
       tedarikci: 'Mavi Su Ltd',
       tutar: 500,
-      yontem: 'Havale',
+      yontem: 'Nakit',
       faturaNo: 'ORNEK-F001',
-      not: 'Örnek ödeme'
+      not: 'Örnek ödeme',
+      kullanici: 'Fatih Toprak',
+      onayDurum: 'Onaylandi'
     },
     {
       tarih: '12.10.2026',
       tedarikci: 'Kaynak Dağıtım',
       tutar: 320,
-      yontem: 'Nakit',
+      yontem: 'Kredi kartı',
       faturaNo: 'ORNEK-F002',
-      not: 'Örnek ödeme'
+      not: 'Örnek ödeme',
+      kullanici: 'Sercan Toprak',
+      onayDurum: 'Onaylandi'
+    },
+    {
+      tarih: '18.10.2026',
+      tedarikci: 'Tekel Ambalaj',
+      tutar: 200,
+      yontem: 'Vadeli',
+      faturaNo: 'ORNEK-F003',
+      not: 'Vadeli kayıt — borç düşmez',
+      kullanici: 'Sercan Toprak',
+      onayDurum: 'Bekliyor'
     }
   ];
 
@@ -97,7 +121,8 @@ function loadSampleTestData() {
       aciklama: 'Örnek satış — mağaza',
       kategori: 'Satış',
       kaynak: 'Nakit',
-      not: 'Örnek gelir'
+      not: 'Örnek gelir',
+      kullanici: 'Fatih Toprak'
     },
     {
       tarih: '09.10.2026',
@@ -105,7 +130,8 @@ function loadSampleTestData() {
       aciklama: 'Örnek satış — kart',
       kategori: 'Satış',
       kaynak: 'Kart',
-      not: 'Örnek gelir'
+      not: 'Örnek gelir',
+      kullanici: 'Sercan Toprak'
     },
     {
       tarih: '15.10.2026',
@@ -113,7 +139,8 @@ function loadSampleTestData() {
       aciklama: 'Örnek diğer gelir',
       kategori: 'Diğer',
       kaynak: 'Havale',
-      not: 'Örnek gelir'
+      not: 'Örnek gelir',
+      kullanici: 'Aleyna Toprak'
     }
   ];
 
@@ -123,21 +150,24 @@ function loadSampleTestData() {
       tutar: 200,
       aciklama: 'Örnek kira taksiti',
       kategori: 'Kira',
-      not: 'Örnek gider'
+      not: 'Örnek gider',
+      kullanici: 'Fatih Toprak'
     },
     {
       tarih: '11.10.2026',
       tutar: 180,
       aciklama: 'Örnek market alışverişi',
       kategori: 'Market',
-      not: 'Örnek gider'
+      not: 'Örnek gider',
+      kullanici: 'Sercan Toprak'
     },
     {
       tarih: '14.10.2026',
       tutar: 95,
       aciklama: 'Örnek yemek gideri',
       kategori: 'Yemek',
-      not: 'Örnek gider'
+      not: 'Örnek gider',
+      kullanici: 'Aleyna Toprak'
     }
   ];
 
@@ -146,6 +176,7 @@ function loadSampleTestData() {
   var sheetOde = ss.getSheetByName(cfg.SHEETS.ODEMELER);
   var sheetGel = ss.getSheetByName(cfg.SHEETS.GELIR);
   var sheetGid = ss.getSheetByName(cfg.SHEETS.GIDER);
+  var sheetOnay = ss.getSheetByName(cfg.SHEETS.ONAYLAR);
 
   if (!sheetTed || !sheetFat || !sheetOde || !sheetGel || !sheetGid) {
     var missing =
@@ -161,8 +192,8 @@ function loadSampleTestData() {
     if (rowExistsByKey_(existingTed, 0, t.ad)) {
       continue;
     }
-    sheetTed.appendRow([t.ad, t.telefon, t.not, 0]);
-    existingTed.push([t.ad, t.telefon, t.not, 0]);
+    sheetTed.appendRow([t.ad, t.telefon, t.not, 0, 'Evet']);
+    existingTed.push([t.ad, t.telefon, t.not, 0, 'Evet']);
     added.tedarikci++;
   }
 
@@ -173,7 +204,8 @@ function loadSampleTestData() {
       continue;
     }
     sheetFat.appendRow([
-      f.faturaNo, f.tarih, f.tedarikci, f.tutar, f.vade, f.durum, f.not
+      f.faturaNo, f.tarih, f.tedarikci, f.tutar, f.vade, f.durum, f.not,
+      f.yontem, f.kullanici, f.onayDurum, '', ''
     ]);
     existingFat.push([
       f.faturaNo, f.tarih, f.tedarikci, f.tutar, f.vade, f.durum, f.not
@@ -188,7 +220,8 @@ function loadSampleTestData() {
       continue;
     }
     sheetOde.appendRow([
-      o.tarih, o.tedarikci, o.tutar, o.yontem, o.faturaNo, o.not
+      o.tarih, o.tedarikci, o.tutar, o.yontem, o.faturaNo, o.not,
+      o.kullanici, o.onayDurum, '', ''
     ]);
     existingOde.push([
       o.tarih, o.tedarikci, o.tutar, o.yontem, o.faturaNo, o.not
@@ -203,7 +236,7 @@ function loadSampleTestData() {
       continue;
     }
     sheetGel.appendRow([
-      g.tarih, g.tutar, g.aciklama, g.kategori, g.kaynak, g.not
+      g.tarih, g.tutar, g.aciklama, g.kategori, g.kaynak, g.not, g.kullanici
     ]);
     existingGel.push([
       g.tarih, g.tutar, g.aciklama, g.kategori, g.kaynak, g.not
@@ -217,9 +250,8 @@ function loadSampleTestData() {
     if (txExists_(existingGid, x.tarih, x.tutar, x.aciklama)) {
       continue;
     }
-    // Gider: Tarih, Tutar, Açıklama, Kategori, Not (tedarikçi yok)
     sheetGid.appendRow([
-      x.tarih, x.tutar, x.aciklama, x.kategori, x.not
+      x.tarih, x.tutar, x.aciklama, x.kategori, x.not, x.kullanici
     ]);
     existingGid.push([
       x.tarih, x.tutar, x.aciklama, x.kategori, x.not
@@ -227,10 +259,28 @@ function loadSampleTestData() {
     added.gider++;
   }
 
+  // Örnek bekleyen onay (Vadeli ödeme)
+  if (sheetOnay) {
+    var existingOnay = getDataRows(sheetOnay);
+    var onayId = 'ON-ORNEK-VADELI';
+    if (!rowExistsByKey_(existingOnay, 0, onayId)) {
+      sheetOnay.appendRow([
+        onayId,
+        'odeme',
+        '',
+        'Sercan Toprak',
+        '18.10.2026',
+        'Bekliyor',
+        'Vadeli · Tekel Ambalaj · 200 (örnek)'
+      ]);
+      added.onay++;
+    }
+  }
+
   var bal = refreshSupplierBalances();
   var totalAdded =
     added.tedarikci + added.fatura + added.odeme + added.gelir +
-    added.gider + added.kullanici;
+    added.gider + added.kullanici + added.onay;
 
   var message =
     totalAdded === 0
@@ -243,7 +293,8 @@ function loadSampleTestData() {
           'Ödeme: ' + added.odeme,
           'Gelir: ' + added.gelir,
           'Gider: ' + added.gider,
-          'Kullanıcı (sheet, kod yok): ' + added.kullanici,
+          'Kullanıcı (sheet, kod test only): ' + added.kullanici,
+          'Onay: ' + added.onay,
           bal && bal.message ? bal.message : ''
         ].filter(Boolean).join('\n');
 
@@ -252,7 +303,7 @@ function loadSampleTestData() {
 }
 
 /**
- * Kullanicilar sayfasına TEST_USERS ad/rol satırları ekler (kod yazılmaz — test only).
+ * Kullanicilar sayfasına TEST_USERS satırları ekler (kod test only).
  * @param {Spreadsheet} ss
  * @param {Object} cfg
  * @return {number} eklenen satır
@@ -267,14 +318,24 @@ function seedTestUsers_(ss, cfg) {
   var added = 0;
   for (var i = 0; i < users.length; i++) {
     var u = users[i];
-    var ad = u.ad;
-    if (rowExistsByKey_(existing, 2, ad)) {
+    var id = u.id;
+    var found = false;
+    for (var j = 0; j < existing.length; j++) {
+      // Yeni şema: Id col0; eski: Ad col2
+      if (normalizeKeyPart(existing[j][0]) === normalizeKeyPart(id) ||
+          normalizeKeyPart(existing[j][2]) === normalizeKeyPart(u.ad) ||
+          normalizeKeyPart(existing[j][3]) === normalizeKeyPart(u.ad)) {
+        found = true;
+        break;
+      }
+    }
+    if (found) {
       continue;
     }
-    // E-posta placeholder; kod sheet’e yazılmaz (test only, Config’te)
     var email = String(u.id || 'test') + '@example.com';
-    sheet.appendRow([email, u.rol, ad, 'Evet']);
-    existing.push([email, u.rol, ad, 'Evet']);
+    // Kod sheet’e yazılır — test only
+    sheet.appendRow([u.id, email, u.rol, u.ad, 'Evet', u.kod || '']);
+    existing.push([u.id, email, u.rol, u.ad, 'Evet', u.kod || '']);
     added++;
   }
   return added;
@@ -292,7 +353,8 @@ function ensureSampleSheets_(ss, cfg) {
     { ad: cfg.SHEETS.TEDARIKCILER, basliklar: cfg.HEADERS.TEDARIKCILER },
     { ad: cfg.SHEETS.FATURALAR, basliklar: cfg.HEADERS.FATURALAR },
     { ad: cfg.SHEETS.ODEMELER, basliklar: cfg.HEADERS.ODEMELER },
-    { ad: cfg.SHEETS.KULLANICILAR, basliklar: cfg.HEADERS.KULLANICILAR }
+    { ad: cfg.SHEETS.KULLANICILAR, basliklar: cfg.HEADERS.KULLANICILAR },
+    { ad: cfg.SHEETS.ONAYLAR, basliklar: cfg.HEADERS.ONAYLAR }
   ];
   for (var i = 0; i < defs.length; i++) {
     var d = defs[i];

@@ -3,12 +3,13 @@
  *
  * Aktif tabloya yazar: SpreadsheetApp.getActiveSpreadsheet().
  * YOUR_SPREADSHEET_ID zorunlu değildir; canlı ID kullanılmaz.
+ * Ödeme yöntemi alanı: Nakit | Kredi kartı | Vadeli.
  */
 
 /**
  * Yeni fatura kaydı ekler.
- * @param {Object} kayit — {faturaNo, tarih, tedarikci, tutar, vade, durum, not}
- * @return {{ok: boolean, message: string, duplicate?: boolean}}
+ * @param {Object} kayit — {faturaNo, tarih, tedarikci, tutar, vade, durum, not, yontem, dekontFileId, dekontUrl}
+ * @return {{ok: boolean, message: string, duplicate?: boolean, row?: number}}
  */
 function addInvoice(kayit) {
   // Fatura ekleme: patron veya personel (tedarikçi ekleme hâlâ yalnız patron).
@@ -21,6 +22,7 @@ function addInvoice(kayit) {
   var faturaNo = String(kayit.faturaNo || '').trim();
   var tedarikci = String(kayit.tedarikci || '').trim();
   var tutar = parseTutar(kayit.tutar);
+  var yontem = normalizeOdemeYontemi(kayit.yontem || '');
 
   if (!faturaNo || !kayit.tarih || !tedarikci || isNaN(tutar)) {
     return {
@@ -43,6 +45,9 @@ function addInvoice(kayit) {
     return { ok: false, message: got.message };
   }
 
+  var onayDurum = initialApprovalStatus_();
+  var kullanici = currentActorLabel_();
+
   got.sheet.appendRow([
     faturaNo,
     kayit.tarih,
@@ -50,12 +55,31 @@ function addInvoice(kayit) {
     tutar,
     kayit.vade || '',
     kayit.durum || 'Açık',
-    kayit.not || ''
+    kayit.not || '',
+    yontem,
+    kullanici,
+    onayDurum,
+    kayit.dekontFileId || '',
+    kayit.dekontUrl || ''
   ]);
 
+  var rowNum = got.sheet.getLastRow();
   refreshSupplierBalances(tedarikci);
 
-  return { ok: true, message: 'Fatura kaydı eklendi.' };
+  createApproval(
+    'fatura',
+    rowNum,
+    faturaNo + ' · ' + tedarikci + ' · ' + tutar +
+      (yontem ? ' · ' + yontem : ''),
+    onayDurum
+  );
+
+  var msg = 'Fatura kaydı eklendi.';
+  if (onayDurum === cfg.ONAY_DURUM.BEKLIYOR) {
+    msg += ' Onay bekliyor.';
+  }
+
+  return { ok: true, message: msg, row: rowNum, onayDurum: onayDurum };
 }
 
 /**
@@ -83,7 +107,12 @@ function listInvoices(filtre) {
       tutar: r[3],
       vade: r[4],
       durum: r[5],
-      not: r[6]
+      not: r[6],
+      yontem: r.length > 7 ? r[7] : '',
+      kullanici: r.length > 8 ? r[8] : '',
+      onayDurum: r.length > 9 ? r[9] : '',
+      dekontFileId: r.length > 10 ? r[10] : '',
+      dekontUrl: r.length > 11 ? r[11] : ''
     };
     if (filtre.tedarikci &&
         normalizeKeyPart(obj.tedarikci) !== normalizeKeyPart(filtre.tedarikci)) {
@@ -127,7 +156,7 @@ function updateInvoice(id, kayit) {
     return { ok: false, message: 'Fatura satırı bulunamadı.' };
   }
 
-  var existing = got.sheet.getRange(rowNum, 1, rowNum, 7).getValues()[0];
+  var existing = got.sheet.getRange(rowNum, 1, rowNum, 12).getValues()[0];
   var faturaNo = kayit.faturaNo !== undefined
     ? String(kayit.faturaNo).trim()
     : existing[0];
@@ -139,6 +168,15 @@ function updateInvoice(id, kayit) {
   var vade = kayit.vade !== undefined ? kayit.vade : existing[4];
   var durum = kayit.durum !== undefined ? kayit.durum : existing[5];
   var not = kayit.not !== undefined ? kayit.not : existing[6];
+  var yontem = kayit.yontem !== undefined
+    ? normalizeOdemeYontemi(kayit.yontem)
+    : existing[7];
+  var kullanici = kayit.kullanici !== undefined ? kayit.kullanici : existing[8];
+  var onayDurum = kayit.onayDurum !== undefined ? kayit.onayDurum : existing[9];
+  var dekontFileId = kayit.dekontFileId !== undefined
+    ? kayit.dekontFileId
+    : existing[10];
+  var dekontUrl = kayit.dekontUrl !== undefined ? kayit.dekontUrl : existing[11];
 
   if (!faturaNo || !tedarikci) {
     return { ok: false, message: 'Fatura no ve tedarikçi boş olamaz.' };
@@ -147,8 +185,9 @@ function updateInvoice(id, kayit) {
     return { ok: false, message: 'Geçersiz tutar.' };
   }
 
-  got.sheet.getRange(rowNum, 1, rowNum, 7).setValues([[
-    faturaNo, tarih, tedarikci, parseTutar(tutar), vade, durum, not
+  got.sheet.getRange(rowNum, 1, rowNum, 12).setValues([[
+    faturaNo, tarih, tedarikci, parseTutar(tutar), vade, durum, not,
+    yontem, kullanici, onayDurum, dekontFileId, dekontUrl
   ]]);
 
   refreshSupplierBalances(tedarikci);
