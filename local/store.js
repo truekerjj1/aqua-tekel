@@ -14,7 +14,9 @@ const FILES = {
   suppliers: 'suppliers.json',
   invoices: 'invoices.json',
   payments: 'payments.json',
-  approvals: 'approvals.json'
+  approvals: 'approvals.json',
+  logins: 'logins.json',
+  'weekly-digest': 'weekly-digest.json'
 };
 
 function ensureDirs() {
@@ -46,6 +48,22 @@ function writeJson(key, data) {
   fs.writeFileSync(filePath(key), JSON.stringify(data, null, 2) + '\n', 'utf8');
 }
 
+function formatTrFromDate(d) {
+  var dd = String(d.getDate()).padStart(2, '0');
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  return dd + '.' + mm + '.' + d.getFullYear();
+}
+
+/** Önceki takvim haftası içinde örnek gün (Pzt=0 … Paz=6). */
+function previousWeekDay(offsetDays) {
+  var now = new Date();
+  var dow = now.getDay(); // 0=Paz
+  var daysSinceMon = (dow + 6) % 7;
+  var thisMon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMon);
+  var prevMon = new Date(thisMon.getFullYear(), thisMon.getMonth(), thisMon.getDate() - 7);
+  return new Date(prevMon.getFullYear(), prevMon.getMonth(), prevMon.getDate() + offsetDays);
+}
+
 function seedIfEmpty() {
   ensureDirs();
 
@@ -66,13 +84,20 @@ function seedIfEmpty() {
     { ad: 'Tekel Ambalaj', telefon: '0312 555 0303', not: 'Örnek tedarikçi', kalanBorc: 0, aktif: true }
   ];
 
+  var dMon = formatTrFromDate(previousWeekDay(0));
+  var dTue = formatTrFromDate(previousWeekDay(1));
+  var dWed = formatTrFromDate(previousWeekDay(2));
+  var dThu = formatTrFromDate(previousWeekDay(3));
+  var dFri = formatTrFromDate(previousWeekDay(4));
+  var dSat = formatTrFromDate(previousWeekDay(5));
+
   const invoices = [
     {
       faturaNo: 'ORNEK-F001',
-      tarih: '01.10.2026',
+      tarih: dMon,
       tedarikci: 'Mavi Su Ltd',
       tutar: 1500,
-      vade: '15.10.2026',
+      vade: dThu,
       durum: 'Açık',
       not: 'Örnek fatura',
       yontem: 'Vadeli',
@@ -83,10 +108,10 @@ function seedIfEmpty() {
     },
     {
       faturaNo: 'ORNEK-F002',
-      tarih: '05.10.2026',
+      tarih: dTue,
       tedarikci: 'Kaynak Dağıtım',
       tutar: 820,
-      vade: '20.10.2026',
+      vade: dFri,
       durum: 'Açık',
       not: 'Örnek fatura',
       yontem: 'Nakit',
@@ -97,10 +122,10 @@ function seedIfEmpty() {
     },
     {
       faturaNo: 'ORNEK-F003',
-      tarih: '10.10.2026',
+      tarih: dWed,
       tedarikci: 'Tekel Ambalaj',
       tutar: 450,
-      vade: '25.10.2026',
+      vade: dSat,
       durum: 'Açık',
       not: 'Örnek fatura',
       yontem: 'Kredi kartı',
@@ -113,7 +138,7 @@ function seedIfEmpty() {
 
   const payments = [
     {
-      tarih: '08.10.2026',
+      tarih: dTue,
       tedarikci: 'Mavi Su Ltd',
       tutar: 500,
       yontem: 'Nakit',
@@ -125,7 +150,7 @@ function seedIfEmpty() {
       dekontUrl: ''
     },
     {
-      tarih: '12.10.2026',
+      tarih: dThu,
       tedarikci: 'Kaynak Dağıtım',
       tutar: 320,
       yontem: 'Kredi kartı',
@@ -137,7 +162,7 @@ function seedIfEmpty() {
       dekontUrl: ''
     },
     {
-      tarih: '18.10.2026',
+      tarih: dFri,
       tedarikci: 'Tekel Ambalaj',
       tutar: 200,
       yontem: 'Vadeli',
@@ -152,7 +177,7 @@ function seedIfEmpty() {
 
   const income = [
     {
-      tarih: '03.10.2026',
+      tarih: dMon,
       tutar: 2400,
       aciklama: 'Örnek satış — mağaza',
       kategori: 'Satış',
@@ -161,7 +186,7 @@ function seedIfEmpty() {
       kullanici: 'Fatih Toprak'
     },
     {
-      tarih: '09.10.2026',
+      tarih: dWed,
       tutar: 1100,
       aciklama: 'Örnek satış — kart',
       kategori: 'Satış',
@@ -170,7 +195,7 @@ function seedIfEmpty() {
       kullanici: 'Sercan Toprak'
     },
     {
-      tarih: '15.10.2026',
+      tarih: dFri,
       tutar: 350,
       aciklama: 'Örnek diğer gelir',
       kategori: 'Diğer',
@@ -182,7 +207,7 @@ function seedIfEmpty() {
 
   const expense = [
     {
-      tarih: '04.10.2026',
+      tarih: dTue,
       tutar: 200,
       aciklama: 'Örnek yemek',
       kategori: 'Yemek',
@@ -190,7 +215,7 @@ function seedIfEmpty() {
       kullanici: 'Sercan Toprak'
     },
     {
-      tarih: '11.10.2026',
+      tarih: dThu,
       tutar: 85,
       aciklama: 'Örnek temizlik',
       kategori: 'Temizlik',
@@ -198,7 +223,7 @@ function seedIfEmpty() {
       kullanici: 'Aleyna Toprak'
     },
     {
-      tarih: '16.10.2026',
+      tarih: dFri,
       tutar: 1200,
       aciklama: 'Örnek kira payı',
       kategori: 'Kira',
@@ -213,9 +238,47 @@ function seedIfEmpty() {
       tip: 'odeme',
       refId: 4,
       kullanici: 'Sercan Toprak',
-      tarih: '18.10.2026',
+      tarih: dFri,
       durum: 'Bekliyor',
       ozet: 'Vadeli · Tekel Ambalaj · 200 (vadeli — borç düşmez)'
+    }
+  ];
+
+  const logins = [
+    {
+      tarih: dMon,
+      saat: '09:12:01',
+      userId: 'test-fatih',
+      ad: 'Fatih Toprak',
+      rol: 'patron'
+    },
+    {
+      tarih: dTue,
+      saat: '10:05:22',
+      userId: 'test-sercan',
+      ad: 'Sercan Toprak',
+      rol: 'personel'
+    },
+    {
+      tarih: dWed,
+      saat: '14:40:11',
+      userId: 'test-fatih',
+      ad: 'Fatih Toprak',
+      rol: 'patron'
+    },
+    {
+      tarih: dThu,
+      saat: '08:55:00',
+      userId: 'test-aleyna',
+      ad: 'Aleyna Toprak',
+      rol: 'personel'
+    },
+    {
+      tarih: dFri,
+      saat: '16:20:33',
+      userId: 'test-sercan',
+      ad: 'Sercan Toprak',
+      rol: 'personel'
     }
   ];
 
@@ -226,7 +289,9 @@ function seedIfEmpty() {
     suppliers: suppliers,
     invoices: invoices,
     payments: payments,
-    approvals: approvals
+    approvals: approvals,
+    logins: logins,
+    'weekly-digest': null
   };
 
   Object.keys(FILES).forEach(function (key) {

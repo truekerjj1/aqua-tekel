@@ -100,6 +100,84 @@
     box-shadow: 0 0 0 1px rgba(245, 197, 24, 0.35);
   }
 
+  .brand-logo {
+    flex: 0 0 auto;
+    display: block;
+    line-height: 0;
+  }
+
+  .logo-svg {
+    display: block;
+    width: 2.55rem;
+    height: 2.55rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 0 0 1px rgba(245, 197, 24, 0.4);
+  }
+
+  .logo-svg--sm {
+    width: 2.55rem;
+    height: 2.55rem;
+  }
+
+  .logo-svg--hero {
+    width: clamp(4.5rem, 18vw, 5.75rem);
+    height: clamp(4.5rem, 18vw, 5.75rem);
+    border-radius: 1rem;
+    box-shadow:
+      0 0 0 1px rgba(245, 197, 24, 0.45),
+      0 16px 36px rgba(245, 197, 24, 0.22);
+  }
+
+  .login-logo-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 0 auto 1rem;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex: 0 0 auto;
+  }
+
+  .nav-toggle {
+    display: none;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 2.5rem;
+    min-width: 2.5rem;
+    padding: 0.4rem 0.55rem;
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #0a0a0a;
+    background: var(--yellow);
+    border: none;
+    border-radius: 0.45rem;
+    cursor: pointer;
+  }
+
+  .nav-toggle-bars {
+    display: block;
+    width: 1rem;
+    height: 0.7rem;
+    background:
+      linear-gradient(#0a0a0a, #0a0a0a) 0 0 / 100% 2px no-repeat,
+      linear-gradient(#0a0a0a, #0a0a0a) 0 50% / 100% 2px no-repeat,
+      linear-gradient(#0a0a0a, #0a0a0a) 0 100% / 100% 2px no-repeat;
+  }
+
+  .nav-toggle[aria-expanded='true'] .nav-toggle-bars {
+    background:
+      linear-gradient(#0a0a0a, #0a0a0a) 0 50% / 100% 2px no-repeat;
+  }
+
+  .nav-toggle-label {
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
   .brand-text {
     min-width: 0;
   }
@@ -156,23 +234,16 @@
     padding: 0.4rem 0.25rem 0;
   }
 
-  .login-hero .brand-mark {
-    width: 3.1rem;
-    height: 3.1rem;
-    margin: 0 auto 0.85rem;
-    font-size: 0.92rem;
-    border-radius: 0.55rem;
-  }
-
   .login-brand {
     margin: 0;
     font-family: var(--font-display);
-    font-size: clamp(2rem, 7.5vw, 2.75rem);
+    font-size: clamp(2.15rem, 8.5vw, 3.1rem);
     font-weight: 800;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--yellow);
-    line-height: 1.05;
+    line-height: 1.02;
+    text-shadow: 0 2px 24px rgba(245, 197, 24, 0.18);
   }
 
   .login-tagline {
@@ -393,6 +464,10 @@
     scrollbar-color: var(--border) transparent;
   }
 
+  .tabs.is-open {
+    display: flex;
+  }
+
   .tabs::-webkit-scrollbar {
     height: 0.35rem;
   }
@@ -405,9 +480,10 @@
   .tab {
     flex: 0 0 auto;
     margin: 0;
-    padding: 0.42rem 0.58rem;
+    min-height: 2.4rem;
+    padding: 0.5rem 0.7rem;
     font: inherit;
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     font-weight: 700;
     color: var(--muted);
     background: var(--bg-elevated);
@@ -648,9 +724,10 @@
 
   .btn-sm {
     margin: 0;
-    padding: 0.35rem 0.65rem;
+    min-height: 2.25rem;
+    padding: 0.45rem 0.75rem;
     font: inherit;
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 700;
     color: var(--yellow);
     background: transparent;
@@ -873,7 +950,8 @@
     justify-content: center;
     width: 100%;
     aspect-ratio: 1;
-    max-height: 2.35rem;
+    min-height: 2.5rem;
+    max-height: 2.75rem;
     margin: 0;
     padding: 0;
     font: inherit;
@@ -885,6 +963,50 @@
     border-radius: 0.35rem;
     cursor: pointer;
     transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+  }
+
+  /* —— Haftalık özet —— */
+  .digest-actions {
+    margin-bottom: 0.85rem;
+  }
+
+  .digest-card {
+    margin-top: 0.35rem;
+    padding: 0.85rem 0.75rem 1rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--surface-line);
+    border-radius: var(--radius);
+    animation: fade-in 0.35s var(--ease) both;
+  }
+
+  .digest-period {
+    margin: 0 0 0.85rem;
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--yellow);
+  }
+
+  .digest-giris {
+    margin: 0 0 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-strong);
+  }
+
+  .digest-metin {
+    margin: 0;
+    padding: 0.75rem 0.7rem;
+    font-family: var(--font);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text);
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    overflow-x: auto;
   }
 
   .date-cal-day:hover,
@@ -950,6 +1072,28 @@
     to { opacity: 1; }
   }
 
+  @keyframes pulse-soft {
+    0%, 100% {
+      transform: scale(1);
+      filter: drop-shadow(0 0 0 rgba(245, 197, 24, 0));
+    }
+    50% {
+      transform: scale(1.03);
+      filter: drop-shadow(0 8px 18px rgba(245, 197, 24, 0.28));
+    }
+  }
+
+  @keyframes tab-slide {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .anim-rise {
     animation: rise-in 0.48s var(--ease) both;
   }
@@ -958,22 +1102,28 @@
     animation: fade-in 0.35s var(--ease) both;
   }
 
+  .anim-pulse-soft {
+    animation: pulse-soft 2.8s var(--ease) 0.4s 2 both;
+  }
+
   .login-hero.anim-rise {
     animation-delay: 0.02s;
   }
 
   .login-card.anim-rise {
-    animation-delay: 0.1s;
+    animation-delay: 0.12s;
   }
 
   .tab-panel.is-active {
-    animation: fade-in 0.28s var(--ease) both;
+    animation: tab-slide 0.32s var(--ease) both;
   }
 
   @media (prefers-reduced-motion: reduce) {
     .anim-rise,
     .anim-fade,
+    .anim-pulse-soft,
     .tab-panel.is-active,
+    .digest-card,
     .tab,
     .btn {
       animation: none;
@@ -981,28 +1131,142 @@
     }
   }
 
-  @media (max-width: 380px) {
+  /* —— Mobil (telefon öncelikli) —— */
+  @media (max-width: 720px) {
+    .page {
+      padding-left: 0.85rem;
+      padding-right: 0.85rem;
+      overflow-x: hidden;
+    }
+
+    .site-header {
+      flex-wrap: wrap;
+      row-gap: 0.55rem;
+    }
+
     .badge-test {
-      max-width: 8.2rem;
-      font-size: 0.54rem;
+      max-width: 9.5rem;
+      font-size: 0.52rem;
+      padding: 0.32rem 0.4rem;
+    }
+
+    .nav-toggle {
+      display: inline-flex;
+    }
+
+    .nav-toggle[hidden] {
+      display: none !important;
+    }
+
+    .tabs {
+      display: none;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      gap: 0.35rem;
+      margin: 0 0 0.85rem;
+      padding: 0.55rem;
+      max-height: min(70vh, 28rem);
+      overflow-y: auto;
+      overflow-x: hidden;
+      background: var(--bg-elevated);
+      border: 1px solid var(--surface-line);
+      border-radius: var(--radius);
+    }
+
+    .tabs.is-open {
+      display: flex;
+      animation: fade-in 0.22s var(--ease) both;
+    }
+
+    .tab {
+      width: 100%;
+      justify-content: flex-start;
+      text-align: left;
+      min-height: 2.75rem;
+      font-size: 0.88rem;
+      padding: 0.65rem 0.85rem;
+    }
+
+    .panel {
+      padding: 1rem 0.85rem 1.15rem;
+      overflow-x: hidden;
+    }
+
+    .metric-row {
+      grid-template-columns: 1fr;
+    }
+
+    .metric-row--4 {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .form-login select,
+    .form-login input,
+    .form select,
+    .form input,
+    .btn {
+      min-height: 2.75rem;
+    }
+
+    .date-range-pickers {
+      grid-template-columns: 1fr;
+    }
+
+    .date-cal-table {
+      font-size: 0.85rem;
+    }
+
+    .chart-bars {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 0.25rem;
+    }
+
+    .list li {
+      word-break: break-word;
+    }
+
+    .app-toolbar {
+      flex-wrap: wrap;
+    }
+
+    #btn-logout {
+      min-height: 2.5rem;
+      min-width: 2.5rem;
+      padding: 0.45rem 0.65rem;
+    }
+  }
+
+  @media (max-width: 390px) {
+    .badge-test {
+      max-width: 7.5rem;
+      font-size: 0.5rem;
     }
 
     .brand-name {
-      font-size: 0.98rem;
+      font-size: 0.95rem;
+      letter-spacing: 0.06em;
+    }
+
+    .brand-sub {
+      font-size: 0.68rem;
     }
 
     .login-brand {
-      font-size: 1.75rem;
+      font-size: 1.85rem;
       letter-spacing: 0.08em;
+    }
+
+    .login-card {
+      padding: 1.25rem 1rem 1.15rem;
     }
 
     .metric-value {
       font-size: 0.86rem;
     }
 
-    .tab {
-      padding: 0.38rem 0.5rem;
-      font-size: 0.68rem;
+    .metric-row--4 {
+      grid-template-columns: 1fr;
     }
   }
 </style>

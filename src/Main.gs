@@ -15,6 +15,8 @@ function onOpen() {
   ui.createMenu('Aqua Tekel (Test)')
     .addItem('Test sayfalarını kur', 'setupTestSheets')
     .addItem('Örnek test verisi yükle', 'loadSampleTestData')
+    .addItem('Haftalık özet tetikleyicisi (Pzt 09:00)', 'installWeeklyDigestTrigger')
+    .addItem('Haftalık özeti şimdi çalıştır', 'triggerWeeklyDigest')
     .addItem('Paneli aç (talimat)', 'showPanelOpenInstructions')
     .addToUi();
 }

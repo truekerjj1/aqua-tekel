@@ -11,26 +11,46 @@
     <div class="page">
       <header class="site-header">
         <div class="brand-block">
-          <div class="brand-mark" aria-hidden="true">AT</div>
+          <span class="brand-logo" aria-hidden="true">
+            <svg class="logo-svg logo-svg--sm" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" focusable="false">
+              <rect width="64" height="64" rx="12" fill="#F5C518"/>
+              <path d="M32 10c-8.5 14-16 22.5-16 30a16 16 0 0032 0c0-7.5-7.5-16-16-30z" fill="#0a0a0a"/>
+              <path d="M32 28c-3.2 5.4-6 8.8-6 12.2a6 6 0 0012 0c0-3.4-2.8-6.8-6-12.2z" fill="#F5C518"/>
+              <text x="32" y="58" text-anchor="middle" font-family="Syne,sans-serif" font-size="9" font-weight="800" fill="#0a0a0a" letter-spacing="0.06em">AT</text>
+            </svg>
+          </span>
           <div class="brand-text">
             <p class="brand-name"><?= brandName ?></p>
             <p class="brand-sub"><?= brandSubtitle ?></p>
           </div>
         </div>
-        <p class="badge-test"><?= environmentLabel ?></p>
+        <div class="header-actions">
+          <p class="badge-test"><?= environmentLabel ?></p>
+          <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="tab-nav" hidden>
+            <span class="nav-toggle-bars" aria-hidden="true"></span>
+            <span class="nav-toggle-label">Menü</span>
+          </button>
+        </div>
       </header>
 
       <!-- Giriş — marka hero + etkileşim kartı -->
       <div id="login-view" class="login-wrap">
         <div class="login-hero anim-rise">
-          <div class="brand-mark" aria-hidden="true">AT</div>
+          <div class="login-logo-wrap anim-pulse-soft" aria-hidden="true">
+            <svg class="logo-svg logo-svg--hero" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" focusable="false">
+              <rect width="64" height="64" rx="14" fill="#F5C518"/>
+              <path d="M32 10c-8.5 14-16 22.5-16 30a16 16 0 0032 0c0-7.5-7.5-16-16-30z" fill="#0a0a0a"/>
+              <path d="M32 28c-3.2 5.4-6 8.8-6 12.2a6 6 0 0012 0c0-3.4-2.8-6.8-6-12.2z" fill="#F5C518"/>
+              <text x="32" y="58" text-anchor="middle" font-family="Syne,sans-serif" font-size="9" font-weight="800" fill="#0a0a0a" letter-spacing="0.06em">AT</text>
+            </svg>
+          </div>
           <p class="login-brand"><?= brandName ?></p>
           <p class="login-tagline"><?= brandSubtitle ?></p>
           <span class="login-badge"><?= environmentLabel ?></span>
         </div>
         <div class="login-card anim-rise">
           <h1 class="login-title">Güvenli giriş</h1>
-          <p class="login-lead">Yetkili kullanıcı bilgilerinizle işlem ekranına giriş yapın.</p>
+          <p class="login-lead">Yetkili hesabınızla panele girin. Test kodları canlı şifre değildir.</p>
           <form class="form-login" id="form-login" autocomplete="off">
             <label>
               Kullanıcı
@@ -79,6 +99,7 @@
           </button>
           <button type="button" class="tab tab-patron" data-tab="tedarikci" role="tab" aria-selected="false" hidden>Tedarikçi</button>
           <button type="button" class="tab tab-patron" data-tab="yonetici" role="tab" aria-selected="false" hidden>Yönetici</button>
+          <button type="button" class="tab tab-patron" data-tab="haftalik" role="tab" aria-selected="false" hidden>Haftalık Özet</button>
           <button type="button" class="tab tab-patron" data-tab="ayarlar" role="tab" aria-selected="false" hidden>Ayarlar</button>
         </nav>
 
@@ -373,6 +394,49 @@
             <p class="form-msg" id="msg-admin-user" hidden></p>
           </section>
 
+          <!-- Haftalık Özet (yalnız patron) -->
+          <section class="tab-panel" id="panel-haftalik" role="tabpanel" hidden>
+            <h2 class="section-title">Haftalık Özet</h2>
+            <p class="hint">
+              Önceki takvim haftası (Pzt–Paz). GAS: her Pazartesi 09:00 Europe/Istanbul.
+              Localhost’ta e-posta yok — «Özeti simüle et» sonucu <code>local/data/weekly-digest.json</code> dosyasına yazar.
+            </p>
+            <div class="btn-row digest-actions">
+              <button type="button" class="btn" id="btn-digest-simule">Özeti simüle et</button>
+              <button type="button" class="btn-ghost" id="btn-digest-yenile">Son özeti yenile</button>
+            </div>
+            <p class="form-msg" id="msg-haftalik" hidden></p>
+            <div class="digest-card" id="digest-card" hidden>
+              <p class="digest-period" id="digest-period">—</p>
+              <div class="metric-row metric-row--4" id="digest-metrics">
+                <div class="metric">
+                  <span class="metric-label">Ödeme</span>
+                  <span class="metric-value" id="dig-odeme">—</span>
+                </div>
+                <div class="metric">
+                  <span class="metric-label">Fatura</span>
+                  <span class="metric-value" id="dig-fatura">—</span>
+                </div>
+                <div class="metric">
+                  <span class="metric-label">Gelir</span>
+                  <span class="metric-value" id="dig-gelir">—</span>
+                </div>
+                <div class="metric">
+                  <span class="metric-label">Gider</span>
+                  <span class="metric-value" id="dig-gider">—</span>
+                </div>
+              </div>
+              <h3 class="section-title section-title--sm">Firmalara ödemeler</h3>
+              <ul class="list" id="list-digest-firm"></ul>
+              <h3 class="section-title section-title--sm">Kullanıcı girişleri</h3>
+              <p class="digest-giris" id="digest-giris">—</p>
+              <ul class="list" id="list-digest-giris"></ul>
+              <h3 class="section-title section-title--sm">Brifing metni</h3>
+              <pre class="digest-metin" id="digest-metin"></pre>
+            </div>
+            <p class="list-empty muted" id="digest-empty">Henüz haftalık özet yok. Patron olarak «Özeti simüle et»e basın.</p>
+          </section>
+
           <!-- Ayarlar (yalnız patron) -->
           <section class="tab-panel" id="panel-ayarlar" role="tabpanel" hidden>
             <h2 class="section-title">Ayarlar</h2>
@@ -391,8 +455,12 @@
                 <dd>Drive: Aqua Tekel TEST / Dekontlar</dd>
               </div>
               <div>
+                <dt>Haftalık özet</dt>
+                <dd>Pazartesi 09:00 Istanbul · menü: tetikleyici kur</dd>
+              </div>
+              <div>
                 <dt>Yetki</dt>
-                <dd>Yönetici + tedarikçi + onay: patron · Günlük işlem: patron/personel</dd>
+                <dd>Yönetici + tedarikçi + onay + haftalık özet: patron · Günlük işlem: patron/personel</dd>
               </div>
             </dl>
             <p class="hint">Test kullanıcıları <code>Config.TEST_USERS</code> + <code>Kullanicilar</code> sheet (kod test only).</p>
