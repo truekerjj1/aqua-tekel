@@ -174,7 +174,7 @@ function login(userId, accessCode) {
   if (!kod || kod !== String(user.kod || '')) {
     return {
       ok: false,
-      message: 'Erişim kodu hatalı. Test kodunu kontrol edin (ör. TEST1234).',
+      message: 'Şifre hatalı. Test şifresini kontrol edin (ör. TEST1234).',
       session: null
     };
   }
@@ -400,7 +400,7 @@ function denyUnlessWriter() {
     return {
       ok: false,
       message:
-        'Yazma yetkisi yok. Önce panelden kullanıcı seçip test erişim kodu ile giriş yapın.'
+        'Yazma yetkisi yok. Önce panelden kullanıcı seçip test şifresi ile giriş yapın.'
     };
   }
   return {

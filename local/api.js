@@ -294,7 +294,7 @@ function denyUnlessWriter(ctx) {
   if (!getSessionUser(ctx)) {
     return {
       ok: false,
-      message: 'Yazma yetkisi yok. Önce panelden kullanıcı seçip test erişim kodu ile giriş yapın.'
+      message: 'Yazma yetkisi yok. Önce panelden kullanıcı seçip test şifresi ile giriş yapın.'
     };
   }
   return { ok: false, message: 'Bu işlem için yazma yetkisi yok.' };
@@ -637,7 +637,7 @@ var handlers = {
     if (!kod || kod !== String(user.kod || '')) {
       return {
         ok: false,
-        message: 'Erişim kodu hatalı. Test kodunu kontrol edin (ör. TEST1234).',
+        message: 'Şifre hatalı. Test şifresini kontrol edin (ör. TEST1234).',
         session: null
       };
     }
@@ -1214,7 +1214,7 @@ var handlers = {
     var rol = String(kayit.rol || 'personel').trim();
     var kod = String(kayit.kod || '').trim();
     if (!id || !ad || !kod) {
-      return { ok: false, message: 'Id, ad ve erişim kodu gerekli (test only).' };
+      return { ok: false, message: 'Id, ad ve şifre gerekli (test only).' };
     }
     if (rol !== 'patron' && rol !== 'personel') {
       return { ok: false, message: 'Rol patron veya personel olmalı.' };

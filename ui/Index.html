@@ -49,7 +49,7 @@
         </div>
         <div class="login-card anim-rise" role="region" aria-label="Giriş formu">
           <h1 class="login-title">Güvenli giriş</h1>
-          <p class="login-lead">Yetkili hesap ile cari deftere girin. Test kodları canlı şifre değildir.</p>
+          <p class="login-lead">Yetkili hesap ile cari deftere girin. Test şifreleri canlı hesap için değildir.</p>
           <form class="form-login" id="form-login" autocomplete="off">
             <label>
               Kullanıcı
@@ -58,14 +58,14 @@
               </select>
             </label>
             <label>
-              Kişisel erişim kodu
+              Şifre
               <input
                 name="accessCode"
                 id="login-code"
                 type="password"
                 inputmode="text"
                 autocomplete="current-password"
-                placeholder="Erişim kodunuz"
+                placeholder="Şifreniz"
                 required
               />
             </label>
@@ -372,7 +372,7 @@
             <ul class="list" id="list-admin-aktivite"></ul>
 
             <h3 class="section-title section-title--sm">Kullanıcı yönetimi</h3>
-            <p class="hint">Kodlar test only — sheet’te düz metin. Canlı şifre değil.</p>
+            <p class="hint">Şifreler test only — sheet’te düz metin. Canlı hesap şifresi değil.</p>
             <ul class="list" id="list-admin-users"></ul>
             <form class="form" id="form-admin-user">
               <input type="hidden" name="editId" id="user-edit-id" value="" />
@@ -385,7 +385,7 @@
                   <option value="patron">Patron</option>
                 </select>
               </label>
-              <label>Erişim kodu (test only) <input name="kod" type="text" required /></label>
+              <label>Şifre (test only) <input name="kod" type="text" required /></label>
               <div class="btn-row">
                 <button type="submit" class="btn" id="btn-user-kaydet">Kullanıcı ekle</button>
                 <button type="button" class="btn-ghost" id="btn-user-iptal" hidden>İptal</button>
@@ -463,7 +463,7 @@
                 <dd>Yönetici + tedarikçi + onay + haftalık özet: patron · Günlük işlem: patron/personel</dd>
               </div>
             </dl>
-            <p class="hint">Test kullanıcıları <code>Config.TEST_USERS</code> + <code>Kullanicilar</code> sheet (kod test only).</p>
+            <p class="hint">Test kullanıcıları <code>Config.TEST_USERS</code> + <code>Kullanicilar</code> sheet (şifre test only).</p>
           </section>
         </main>
       </div>
