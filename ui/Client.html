@@ -1392,6 +1392,11 @@
       return (n < 10 ? '0' : '') + n;
     }
 
+    function todayTr() {
+      var d = new Date();
+      return pad2(d.getDate()) + '.' + pad2(d.getMonth() + 1) + '.' + d.getFullYear();
+    }
+
     function parseTrDate(s) {
       var m = String(s || '').trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
       if (!m) return null;
@@ -1410,27 +1415,69 @@
       return jsDay === 0 ? 6 : jsDay - 1;
     }
 
-    var adminDatePickers = {
-      baslangic: {
+    /**
+     * Ortak tablo takvim — manuel yazma yok; gizli alan dd.MM.yyyy gönderir.
+     * required: true → varsayılan bugün, Temizle yok
+     */
+    var datePickers = {
+      'gelir-tarih': {
         viewYear: new Date().getFullYear(),
         viewMonth: new Date().getMonth(),
         value: '',
-        calId: 'admin-cal-baslangic',
+        required: true,
+        calId: 'gelir-tarih-cal',
+        inputId: 'gelir-tarih',
+        displayId: 'gelir-tarih-display'
+      },
+      'gider-tarih': {
+        viewYear: new Date().getFullYear(),
+        viewMonth: new Date().getMonth(),
+        value: '',
+        required: true,
+        calId: 'gider-tarih-cal',
+        inputId: 'gider-tarih',
+        displayId: 'gider-tarih-display'
+      },
+      'odeme-tarih': {
+        viewYear: new Date().getFullYear(),
+        viewMonth: new Date().getMonth(),
+        value: '',
+        required: true,
+        calId: 'odeme-tarih-cal',
+        inputId: 'odeme-tarih',
+        displayId: 'odeme-tarih-display'
+      },
+      'fatura-tarih': {
+        viewYear: new Date().getFullYear(),
+        viewMonth: new Date().getMonth(),
+        value: '',
+        required: true,
+        calId: 'fatura-tarih-cal',
+        inputId: 'fatura-tarih',
+        displayId: 'fatura-tarih-display'
+      },
+      'admin-baslangic': {
+        viewYear: new Date().getFullYear(),
+        viewMonth: new Date().getMonth(),
+        value: '',
+        required: false,
+        calId: 'admin-baslangic-cal',
         inputId: 'admin-baslangic',
         displayId: 'admin-baslangic-display'
       },
-      bitis: {
+      'admin-bitis': {
         viewYear: new Date().getFullYear(),
         viewMonth: new Date().getMonth(),
         value: '',
-        calId: 'admin-cal-bitis',
+        required: false,
+        calId: 'admin-bitis-cal',
         inputId: 'admin-bitis',
         displayId: 'admin-bitis-display'
       }
     };
 
-    function syncAdminDateDisplay(key) {
-      var state = adminDatePickers[key];
+    function syncDateDisplay(key) {
+      var state = datePickers[key];
       if (!state) return;
       var input = document.getElementById(state.inputId);
       var display = document.getElementById(state.displayId);
@@ -1447,13 +1494,16 @@
           display.classList.add('is-empty');
         }
       }
-      if (clearBtn) clearBtn.hidden = !state.value;
+      if (clearBtn) {
+        clearBtn.hidden = !state.value || !!state.required;
+      }
     }
 
-    function renderAdminCalendar(key) {
-      var state = adminDatePickers[key];
+    function renderDateCalendar(key) {
+      var state = datePickers[key];
+      if (!state) return;
       var root = document.getElementById(state.calId);
-      if (!root || !state) return;
+      if (!root) return;
 
       var y = state.viewYear;
       var m = state.viewMonth;
@@ -1568,8 +1618,8 @@
       root.innerHTML = html;
     }
 
-    function setAdminDateValue(key, valueStr) {
-      var state = adminDatePickers[key];
+    function setDatePickerValue(key, valueStr) {
+      var state = datePickers[key];
       if (!state) return;
       state.value = valueStr || '';
       if (valueStr) {
@@ -1579,41 +1629,63 @@
           state.viewMonth = d.getMonth();
         }
       }
-      syncAdminDateDisplay(key);
-      renderAdminCalendar(key);
+      syncDateDisplay(key);
+      renderDateCalendar(key);
     }
 
-    function initAdminDatePickers() {
+    function resetRequiredDatePicker(key) {
+      var state = datePickers[key];
+      if (!state) return;
+      setDatePickerValue(key, state.required ? todayTr() : '');
+    }
+
+    function requireDateValue(kayit, msgId) {
+      if (kayit && kayit.tarih && parseTrDate(kayit.tarih)) {
+        return true;
+      }
+      setMsg(msgId, 'Takvimden bir tarih seçin.', false);
+      return false;
+    }
+
+    function initDatePickers() {
       var key;
-      for (key in adminDatePickers) {
-        if (!adminDatePickers.hasOwnProperty(key)) continue;
-        syncAdminDateDisplay(key);
-        renderAdminCalendar(key);
+      for (key in datePickers) {
+        if (!datePickers.hasOwnProperty(key)) continue;
+        if (datePickers[key].required) {
+          datePickers[key].value = todayTr();
+        }
+        syncDateDisplay(key);
+        renderDateCalendar(key);
       }
 
-      var form = document.getElementById('form-admin-filtre');
-      if (!form || form.getAttribute('data-date-bound') === '1') return;
-      form.setAttribute('data-date-bound', '1');
+      if (document.documentElement.getAttribute('data-date-pickers-bound') === '1') {
+        return;
+      }
+      document.documentElement.setAttribute('data-date-pickers-bound', '1');
 
-      form.addEventListener('click', function (e) {
+      document.addEventListener('click', function (e) {
         var t = e.target;
         if (!t || !t.closest) return;
 
         var clearBtn = t.closest('.date-picker-clear');
         if (clearBtn) {
           e.preventDefault();
-          setAdminDateValue(clearBtn.getAttribute('data-clear'), '');
+          var clearKey = clearBtn.getAttribute('data-clear');
+          if (datePickers[clearKey] && !datePickers[clearKey].required) {
+            setDatePickerValue(clearKey, '');
+          }
           return;
         }
+
+        var picker = t.closest('[data-date-picker]');
+        if (!picker) return;
+        var navKey = picker.getAttribute('data-date-picker');
+        var navState = datePickers[navKey];
+        if (!navState) return;
 
         var navBtn = t.closest('.date-cal-nav-btn');
         if (navBtn) {
           e.preventDefault();
-          var picker = navBtn.closest('[data-admin-date]');
-          if (!picker) return;
-          var navKey = picker.getAttribute('data-admin-date');
-          var navState = adminDatePickers[navKey];
-          if (!navState) return;
           if (navBtn.getAttribute('data-nav') === 'prev') {
             navState.viewMonth -= 1;
             if (navState.viewMonth < 0) {
@@ -1627,24 +1699,19 @@
               navState.viewYear += 1;
             }
           }
-          renderAdminCalendar(navKey);
+          renderDateCalendar(navKey);
           return;
         }
 
         var dayBtn = t.closest('.date-cal-day[data-date]');
-        if (dayBtn) {
+        if (dayBtn && picker.contains(dayBtn)) {
           e.preventDefault();
-          var dayPicker = dayBtn.closest('[data-admin-date]');
-          if (!dayPicker) return;
-          setAdminDateValue(
-            dayPicker.getAttribute('data-admin-date'),
-            dayBtn.getAttribute('data-date')
-          );
+          setDatePickerValue(navKey, dayBtn.getAttribute('data-date'));
         }
       });
     }
 
-    initAdminDatePickers();
+    initDatePickers();
 
     var formAdminFiltre = document.getElementById('form-admin-filtre');
     if (formAdminFiltre) {
@@ -1719,14 +1786,16 @@
           setMsg('msg-gelir', 'Kayıt için sunucu bağlantısı gerekli.', false);
           return;
         }
+        var kayit = formValues(formGelir);
+        if (!requireDateValue(kayit, 'msg-gelir')) return;
         withFormBusy(formGelir, function (done) {
-          var kayit = formValues(formGelir);
           google.script.run
             .withSuccessHandler(function (res) {
               done();
               setMsg('msg-gelir', res.message || '', !!res.ok);
               if (res.ok) {
                 formGelir.reset();
+                resetRequiredDatePicker('gelir-tarih');
                 loadGelir();
               }
             })
@@ -1745,6 +1814,7 @@
           return;
         }
         var kayit = formValues(formGider);
+        if (!requireDateValue(kayit, 'msg-gider')) return;
         if (!kayit.kategori) {
           setMsg('msg-gider', 'Kategori seçin.', false);
           return;
@@ -1756,6 +1826,7 @@
               setMsg('msg-gider', res.message || '', !!res.ok);
               if (res.ok) {
                 formGider.reset();
+                resetRequiredDatePicker('gider-tarih');
                 loadGider();
               }
             })
@@ -1829,6 +1900,7 @@
           return;
         }
         var kayit = formValues(formFatura);
+        if (!requireDateValue(kayit, 'msg-fatura')) return;
         if (!kayit.tedarikci) {
           setMsg('msg-fatura', 'Listeden tedarikçi seçin.', false);
           return;
@@ -1852,6 +1924,7 @@
                     setMsg('msg-fatura', res.message || '', !!res.ok);
                     if (res.ok) {
                       formFatura.reset();
+                      resetRequiredDatePicker('fatura-tarih');
                       loadFatura();
                       refreshOnayBadge();
                     }
@@ -1878,6 +1951,7 @@
           return;
         }
         var kayit = formValues(formOdeme);
+        if (!requireDateValue(kayit, 'msg-odeme')) return;
         if (!kayit.tedarikci) {
           setMsg('msg-odeme', 'Listeden tedarikçi seçin.', false);
           return;
@@ -1905,6 +1979,7 @@
                     setMsg('msg-odeme', res.message || '', !!res.ok);
                     if (res.ok) {
                       formOdeme.reset();
+                      resetRequiredDatePicker('odeme-tarih');
                       loadOdeme();
                       refreshOnayBadge();
                     }
