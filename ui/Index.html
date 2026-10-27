@@ -359,12 +359,29 @@
             <div class="chart-wrap" id="chart-fatura" aria-label="Aylık fatura"></div>
             <div class="chart-wrap" id="chart-odeme" aria-label="Aylık ödeme"></div>
 
-            <h3 class="section-title section-title--sm">Firma / tarih filtresi</h3>
+            <h3 class="section-title section-title--sm">Kullanıcı / firma / tarih filtresi</h3>
+            <p class="hint">
+              Örnek: kullanıcı «Sercan Toprak» + hafta «Bu hafta» → «Sercan bu aralıkta X TL gider».
+            </p>
             <form class="form" id="form-admin-filtre">
+              <label>
+                Kullanıcı
+                <select name="kullanici" id="select-admin-kullanici">
+                  <option value="">Tümü</option>
+                </select>
+              </label>
               <label>
                 Tedarikçi
                 <select name="tedarikci" id="select-admin-tedarikci">
                   <option value="">Tümü</option>
+                </select>
+              </label>
+              <label>
+                Hafta ön ayarı
+                <select name="weekPreset" id="select-admin-week">
+                  <option value="">Manuel tarih / yok</option>
+                  <option value="previous">Önceki hafta</option>
+                  <option value="current">Bu hafta</option>
                 </select>
               </label>
               <div class="date-range-pickers" role="group" aria-label="Tarih aralığı">
@@ -394,6 +411,8 @@
               <button type="submit" class="btn">Filtrele</button>
             </form>
             <p class="form-msg" id="msg-admin-filtre" hidden></p>
+            <p class="admin-user-ozet" id="admin-user-ozet" hidden></p>
+            <ul class="list" id="list-admin-user-totals"></ul>
             <ul class="list" id="list-admin-filtre"></ul>
 
             <h3 class="section-title section-title--sm">Tüm kullanıcıların son işlemleri</h3>
@@ -426,16 +445,29 @@
           <section class="tab-panel" id="panel-haftalik" role="tabpanel" hidden>
             <h2 class="section-title">Haftalık Özet</h2>
             <p class="hint">
-              Önceki takvim haftası (Pzt–Paz). GAS: her Pazartesi 09:00 Europe/Istanbul.
-              Localhost’ta e-posta yok — «Özeti simüle et» sonucu <code>local/data/weekly-digest.json</code> dosyasına yazar.
+              Pazartesi tetikleyicisi daima <strong>önceki</strong> takvim haftasını (Pzt–Paz) özetler.
+              Simülasyonda «Otomatik» seçiliyse önceki hafta boşsa <strong>bu hafta</strong> kullanılır
+              (ör. Salı günü girdiğiniz 27.10 kayıtları). Localhost’ta e-posta yok —
+              sonuç <code>local/data/weekly-digest.json</code> dosyasına yazılır.
             </p>
-            <div class="btn-row digest-actions">
-              <button type="button" class="btn" id="btn-digest-simule">Özeti simüle et</button>
-              <button type="button" class="btn-ghost" id="btn-digest-yenile">Son özeti yenile</button>
+            <div class="digest-controls">
+              <label class="digest-week-label">
+                Hafta
+                <select id="select-digest-week" name="weekMode">
+                  <option value="auto" selected>Otomatik (önceki boşsa bu hafta)</option>
+                  <option value="previous">Önceki hafta (Pzt–Paz)</option>
+                  <option value="current">Bu hafta (Pzt–Paz)</option>
+                </select>
+              </label>
+              <div class="btn-row digest-actions">
+                <button type="button" class="btn" id="btn-digest-simule">Özeti simüle et</button>
+                <button type="button" class="btn-ghost" id="btn-digest-yenile">Son özeti yenile</button>
+              </div>
             </div>
             <p class="form-msg" id="msg-haftalik" hidden></p>
             <div class="digest-card" id="digest-card" hidden>
               <p class="digest-period" id="digest-period">—</p>
+              <p class="digest-note muted" id="digest-note" hidden></p>
               <div class="metric-row metric-row--4" id="digest-metrics">
                 <div class="metric">
                   <span class="metric-label">Ödeme</span>
@@ -454,6 +486,10 @@
                   <span class="metric-value" id="dig-gider">—</span>
                 </div>
               </div>
+              <h3 class="section-title section-title--sm">Kullanıcı bazlı gider</h3>
+              <ul class="list" id="list-digest-gider-user"></ul>
+              <h3 class="section-title section-title--sm">Kullanıcı bazlı gelir</h3>
+              <ul class="list" id="list-digest-gelir-user"></ul>
               <h3 class="section-title section-title--sm">Firmalara ödemeler</h3>
               <ul class="list" id="list-digest-firm"></ul>
               <h3 class="section-title section-title--sm">Kullanıcı girişleri</h3>

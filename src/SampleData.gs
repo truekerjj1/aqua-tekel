@@ -10,6 +10,24 @@
  * ardından refreshSupplierBalances() çağırır.
  * @return {{ok: boolean, message: string, added: Object}}
  */
+
+/**
+ * Önceki takvim haftası içinde örnek gün (Pzt=0 … Paz=6) — İstanbul.
+ * Haftalık özet testinin sıfır dönmemesi için sabit Ekim tarihleri yerine kullanılır.
+ * @param {number} offsetDays
+ * @return {string} dd.MM.yyyy
+ */
+function samplePreviousWeekDayTr_(offsetDays) {
+  var key = Utilities.formatDate(new Date(), 'Europe/Istanbul', 'yyyy-MM-dd');
+  var parts = key.split('-');
+  var noon = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 9, 0, 0));
+  var dow = Number(Utilities.formatDate(noon, 'Europe/Istanbul', 'u'));
+  var thisMon = new Date(noon.getTime() - (dow - 1) * 86400000);
+  var prevMon = new Date(thisMon.getTime() - 7 * 86400000);
+  var d = new Date(prevMon.getTime() + offsetDays * 86400000);
+  return Utilities.formatDate(d, 'Europe/Istanbul', 'dd.MM.yyyy');
+}
+
 function loadSampleTestData() {
   // Web App oturumu varsa yalnız patron; menüden (oturum yok) tablo sahibi çalıştırır.
   // Canlı Sheets’e örnek veri yazılmaz — yalnız aktif test tablosu.
@@ -55,13 +73,20 @@ function loadSampleTestData() {
     { ad: 'Tekel Ambalaj', telefon: '0312 555 0303', not: 'Örnek tedarikçi' }
   ];
 
+  var dMon = samplePreviousWeekDayTr_(0);
+  var dTue = samplePreviousWeekDayTr_(1);
+  var dWed = samplePreviousWeekDayTr_(2);
+  var dThu = samplePreviousWeekDayTr_(3);
+  var dFri = samplePreviousWeekDayTr_(4);
+  var dSat = samplePreviousWeekDayTr_(5);
+
   var faturalar = [
     {
       faturaNo: 'ORNEK-F001',
-      tarih: '01.10.2026',
+      tarih: dMon,
       tedarikci: 'Mavi Su Ltd',
       tutar: 1500,
-      vade: '15.10.2026',
+      vade: dThu,
       durum: 'Açık',
       not: 'Örnek fatura',
       yontem: 'Vadeli',
@@ -70,10 +95,10 @@ function loadSampleTestData() {
     },
     {
       faturaNo: 'ORNEK-F002',
-      tarih: '05.10.2026',
+      tarih: dTue,
       tedarikci: 'Kaynak Dağıtım',
       tutar: 820,
-      vade: '20.10.2026',
+      vade: dFri,
       durum: 'Açık',
       not: 'Örnek fatura',
       yontem: 'Nakit',
@@ -82,10 +107,10 @@ function loadSampleTestData() {
     },
     {
       faturaNo: 'ORNEK-F003',
-      tarih: '10.10.2026',
+      tarih: dWed,
       tedarikci: 'Tekel Ambalaj',
       tutar: 450,
-      vade: '25.10.2026',
+      vade: dSat,
       durum: 'Açık',
       not: 'Örnek fatura',
       yontem: 'Kredi kartı',
@@ -96,7 +121,7 @@ function loadSampleTestData() {
 
   var odemeler = [
     {
-      tarih: '08.10.2026',
+      tarih: dThu,
       tedarikci: 'Mavi Su Ltd',
       tutar: 500,
       yontem: 'Nakit',
@@ -106,7 +131,7 @@ function loadSampleTestData() {
       onayDurum: 'Onaylandi'
     },
     {
-      tarih: '12.10.2026',
+      tarih: dFri,
       tedarikci: 'Kaynak Dağıtım',
       tutar: 320,
       yontem: 'Kredi kartı',
@@ -116,7 +141,7 @@ function loadSampleTestData() {
       onayDurum: 'Onaylandi'
     },
     {
-      tarih: '18.10.2026',
+      tarih: dSat,
       tedarikci: 'Tekel Ambalaj',
       tutar: 200,
       yontem: 'Vadeli',
@@ -129,7 +154,7 @@ function loadSampleTestData() {
 
   var gelirler = [
     {
-      tarih: '03.10.2026',
+      tarih: dMon,
       tutar: 2400,
       aciklama: 'Örnek satış — mağaza',
       kategori: 'Satış',
@@ -138,7 +163,7 @@ function loadSampleTestData() {
       kullanici: 'Fatih Toprak'
     },
     {
-      tarih: '09.10.2026',
+      tarih: dWed,
       tutar: 1100,
       aciklama: 'Örnek satış — kart',
       kategori: 'Satış',
@@ -147,7 +172,7 @@ function loadSampleTestData() {
       kullanici: 'Sercan Toprak'
     },
     {
-      tarih: '15.10.2026',
+      tarih: dFri,
       tutar: 350,
       aciklama: 'Örnek diğer gelir',
       kategori: 'Diğer',
@@ -159,7 +184,7 @@ function loadSampleTestData() {
 
   var giderler = [
     {
-      tarih: '04.10.2026',
+      tarih: dTue,
       tutar: 200,
       aciklama: 'Örnek kira taksiti',
       kategori: 'Kira',
@@ -167,7 +192,7 @@ function loadSampleTestData() {
       kullanici: 'Fatih Toprak'
     },
     {
-      tarih: '11.10.2026',
+      tarih: dThu,
       tutar: 180,
       aciklama: 'Örnek market alışverişi',
       kategori: 'Market',
@@ -175,7 +200,7 @@ function loadSampleTestData() {
       kullanici: 'Sercan Toprak'
     },
     {
-      tarih: '14.10.2026',
+      tarih: dFri,
       tutar: 95,
       aciklama: 'Örnek yemek gideri',
       kategori: 'Yemek',
@@ -282,7 +307,7 @@ function loadSampleTestData() {
         'odeme',
         '',
         'Sercan Toprak',
-        '18.10.2026',
+        dSat,
         'Bekliyor',
         'Vadeli · Tekel Ambalaj · 200 (örnek)'
       ]);

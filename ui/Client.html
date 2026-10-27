@@ -635,7 +635,10 @@
       'list-admin-aktivite': 'Henüz aktivite yok.',
       'list-admin-users': 'Kullanıcı listesi boş.',
       'list-digest-firm': 'Bu dönemde firma ödemesi yok.',
-      'list-digest-giris': 'Bu dönemde giriş kaydı yok.'
+      'list-digest-giris': 'Bu dönemde giriş kaydı yok.',
+      'list-digest-gider-user': 'Bu dönemde kullanıcı gideri yok.',
+      'list-digest-gelir-user': 'Bu dönemde kullanıcı geliri yok.',
+      'list-admin-user-totals': 'Seçilen aralıkta kullanıcı toplamı yok.'
     };
 
     function renderList(ulId, items, mapper) {
@@ -1117,6 +1120,21 @@
       loadAdminUsers();
     }
 
+    function userTotalItemHtml(u, tipLabel) {
+      return (
+        '<div class="debt-row"><span>' +
+        escapeText(u.ad) +
+        '</span><span class="borc-value">' +
+        formatTutar(u.tutar) +
+        ' ₺</span></div>' +
+        '<span class="muted">' +
+        escapeText(String(u.adet || 0)) +
+        ' ' +
+        tipLabel +
+        '</span>'
+      );
+    }
+
     function renderDigest(digest) {
       var card = document.getElementById('digest-card');
       var empty = document.getElementById('digest-empty');
@@ -1129,13 +1147,25 @@
       if (card) card.hidden = false;
       var period = document.getElementById('digest-period');
       if (period && digest.period) {
+        var weekLabel = digest.weekLabel || digest.period.weekLabel || '';
         period.textContent =
           'Dönem: ' +
           (digest.period.baslangicTr || digest.period.baslangic) +
           ' – ' +
           (digest.period.bitisTr || digest.period.bitis) +
+          (weekLabel ? ' (' + weekLabel + ')' : '') +
           ' · ' +
           (digest.generatedAtTr || '');
+      }
+      var noteEl = document.getElementById('digest-note');
+      if (noteEl) {
+        if (digest.note) {
+          noteEl.hidden = false;
+          noteEl.textContent = digest.note;
+        } else {
+          noteEl.hidden = true;
+          noteEl.textContent = '';
+        }
       }
       var digOdeme = document.getElementById('dig-odeme');
       var digFatura = document.getElementById('dig-fatura');
@@ -1145,6 +1175,20 @@
       if (digFatura) digFatura.textContent = formatTutar(digest.fatura && digest.fatura.toplam);
       if (digGelir) digGelir.textContent = formatTutar(digest.gelir && digest.gelir.toplam);
       if (digGider) digGider.textContent = formatTutar(digest.gider && digest.gider.toplam);
+      renderList(
+        'list-digest-gider-user',
+        (digest.gider && digest.gider.byUser) || [],
+        function (u) {
+          return userTotalItemHtml(u, 'gider');
+        }
+      );
+      renderList(
+        'list-digest-gelir-user',
+        (digest.gelir && digest.gelir.byUser) || [],
+        function (u) {
+          return userTotalItemHtml(u, 'gelir');
+        }
+      );
       renderList(
         'list-digest-firm',
         (digest.odeme && digest.odeme.byFirm) || [],
@@ -1206,6 +1250,8 @@
       btnDigestSimule.addEventListener('click', function () {
         if (!hasGas() || !isPatron(currentSession)) return;
         btnDigestSimule.disabled = true;
+        var weekSel = document.getElementById('select-digest-week');
+        var weekMode = (weekSel && weekSel.value) || 'auto';
         google.script.run
           .withSuccessHandler(function (res) {
             btnDigestSimule.disabled = false;
@@ -1217,7 +1263,7 @@
             renderDigest(res && res.digest ? res.digest : null);
           })
           .withFailureHandler(rpcFail('msg-haftalik', function () { btnDigestSimule.disabled = false; }))
-          .runWeeklyDigest({ sendEmail: false });
+          .runWeeklyDigest({ sendEmail: false, weekMode: weekMode });
       });
     }
 
@@ -1226,6 +1272,21 @@
       btnDigestYenile.addEventListener('click', function () {
         loadHaftalik();
       });
+    }
+
+    function fillAdminKullaniciSelect(rows) {
+      var sel = document.getElementById('select-admin-kullanici');
+      if (!sel) return;
+      var prev = sel.value;
+      sel.innerHTML = '<option value="">Tümü</option>';
+      (rows || []).forEach(function (u) {
+        if (u && u.aktif === false) return;
+        var opt = document.createElement('option');
+        opt.value = u.ad || u.id || '';
+        opt.textContent = (u.ad || u.id || '') + (u.rol ? ' (' + u.rol + ')' : '');
+        sel.appendChild(opt);
+      });
+      if (prev) sel.value = prev;
     }
 
     function loadAdminUsers() {
@@ -1239,6 +1300,7 @@
             );
             return;
           }
+          fillAdminKullaniciSelect(res.rows || []);
           renderList('list-admin-users', res.rows, function (u) {
             return (
               '<div class="debt-row">' +
@@ -1729,7 +1791,21 @@
               );
               return;
             }
-            setMsg('msg-admin-filtre', 'Filtre uygulandı.', true);
+            var ozetEl = document.getElementById('admin-user-ozet');
+            if (ozetEl) {
+              if (res.ozet && res.ozet.metin) {
+                ozetEl.hidden = false;
+                ozetEl.textContent = res.ozet.metin;
+              } else {
+                ozetEl.hidden = true;
+                ozetEl.textContent = '';
+              }
+            }
+            setMsg(
+              'msg-admin-filtre',
+              (res.ozet && res.ozet.metin) || 'Filtre uygulandı.',
+              true
+            );
             var items = [];
             (res.faturalar || []).forEach(function (r) {
               items.push({
@@ -1772,6 +1848,37 @@
               });
             });
             renderList('list-admin-filtre', items, activityItemHtml);
+
+            // Kullanıcı bazlı gider/gelir özeti (aynı filtre)
+            google.script.run
+              .withSuccessHandler(function (tot) {
+                var rows = (tot && tot.ok && tot.rows) || [];
+                renderList('list-admin-user-totals', rows, function (u) {
+                  return (
+                    '<div class="debt-row"><span>' +
+                    escapeText(u.ad) +
+                    '</span><span class="borc-value">' +
+                    formatTutar(u.gider) +
+                    ' ₺ gider</span></div>' +
+                    '<span class="muted">' +
+                    formatTutar(u.gelir) +
+                    ' ₺ gelir · ' +
+                    escapeText(String(u.giderAdet || 0)) +
+                    ' gider / ' +
+                    escapeText(String(u.gelirAdet || 0)) +
+                    ' gelir</span>'
+                  );
+                });
+              })
+              .withFailureHandler(function () {
+                renderList('list-admin-user-totals', [], function () { return ''; });
+              })
+              .getAdminUserTotals({
+                kullanici: data.kullanici || '',
+                baslangic: data.baslangic || '',
+                bitis: data.bitis || '',
+                weekPreset: data.weekPreset || ''
+              });
           })
           .withFailureHandler(rpcFail('msg-admin-filtre'))
           .getAdminFilteredReport(data);
