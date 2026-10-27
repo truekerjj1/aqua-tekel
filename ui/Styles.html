@@ -1,30 +1,31 @@
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Syne:wght@600;700;800&display=swap');
 
   :root {
-    --bg: #080808;
-    --bg-elevated: #121212;
-    --bg-panel: #161616;
-    --bg-input: #0e0e0e;
-    --surface-line: #2a2a2a;
-    --text: #ececec;
-    --text-strong: #ffffff;
-    --muted: #9a9a9a;
+    --bg: #060606;
+    --bg-elevated: #101010;
+    --bg-panel: #0c0c0c;
+    --bg-input: #080808;
+    --surface-line: #242424;
+    --text: #e8e6e1;
+    --text-strong: #faf9f6;
+    --muted: #8f8c84;
     --yellow: #f5c518;
-    --yellow-deep: #d4a50a;
-    --yellow-soft: rgba(245, 197, 24, 0.14);
-    --yellow-glow: rgba(245, 197, 24, 0.22);
-    --border: #333333;
+    --yellow-deep: #c9a012;
+    --yellow-soft: rgba(245, 197, 24, 0.12);
+    --yellow-mid: rgba(245, 197, 24, 0.28);
+    --border: #2e2e2e;
     --badge-bg: #f5c518;
     --badge-text: #0a0a0a;
     --danger: #e85d5d;
     --ok: #f5c518;
-    --ok-soft: rgba(245, 197, 24, 0.12);
-    --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
-    --radius: 0.85rem;
-    --font-display: "Syne", "Segoe UI", sans-serif;
-    --font: "Figtree", "Segoe UI", "Helvetica Neue", sans-serif;
+    --ok-soft: rgba(245, 197, 24, 0.1);
+    --shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
+    --radius: 0.35rem;
+    --font-display: "Syne", "Avenir Next", sans-serif;
+    --font: "Manrope", "Avenir Next", "Helvetica Neue", sans-serif;
     --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --page-max: 64rem;
   }
 
   * {
@@ -39,38 +40,81 @@
     color: var(--text);
     background-color: var(--bg);
     background-image:
-      radial-gradient(ellipse 90% 55% at 50% -15%, rgba(245, 197, 24, 0.16) 0%, transparent 55%),
-      radial-gradient(circle at 88% 12%, rgba(245, 197, 24, 0.06) 0%, transparent 26%),
-      linear-gradient(180deg, #0c0c0c 0%, var(--bg) 48%, #050505 100%);
+      radial-gradient(ellipse 110% 70% at 50% -20%, rgba(245, 197, 24, 0.14) 0%, transparent 52%),
+      radial-gradient(ellipse 50% 40% at 100% 100%, rgba(245, 197, 24, 0.04) 0%, transparent 50%),
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 47px,
+        rgba(245, 197, 24, 0.025) 47px,
+        rgba(245, 197, 24, 0.025) 48px
+      ),
+      linear-gradient(165deg, #0a0a0a 0%, var(--bg) 42%, #030303 100%);
     background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
   }
 
   body.is-login {
     min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 90% 55% at 18% 12%, rgba(245, 197, 24, 0.2) 0%, transparent 45%),
+      radial-gradient(ellipse 70% 50% at 88% 78%, rgba(245, 197, 24, 0.07) 0%, transparent 48%),
+      repeating-linear-gradient(
+        -18deg,
+        transparent,
+        transparent 28px,
+        rgba(245, 197, 24, 0.03) 28px,
+        rgba(245, 197, 24, 0.03) 29px
+      ),
+      linear-gradient(160deg, #0b0b0b 0%, #050505 55%, #000 100%);
   }
 
   .page {
-    max-width: 56rem;
+    max-width: var(--page-max);
     margin: 0 auto;
-    padding: 1.1rem 1.05rem calc(2.4rem + env(safe-area-inset-bottom, 0));
+    padding: 1.15rem 1.15rem calc(2.5rem + env(safe-area-inset-bottom, 0));
     min-height: 100vh;
+    position: relative;
+  }
+
+  body.is-login .page {
+    max-width: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   @media (min-width: 720px) {
     .page {
-      max-width: 60rem;
-      padding-left: 1.35rem;
-      padding-right: 1.35rem;
+      padding-left: 1.6rem;
+      padding-right: 1.6rem;
+    }
+
+    body.is-login .page {
+      padding: 0;
     }
   }
 
-  /* —— Marka —— */
+  /* —— Marka / üst bar —— */
   .site-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
-    margin-bottom: 1.2rem;
+    gap: 0.85rem;
+    margin: 0 0 1.35rem;
+    padding-bottom: 0.95rem;
+    border-bottom: 1px solid var(--surface-line);
+    position: relative;
+  }
+
+  .site-header::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    width: 4.5rem;
+    height: 2px;
+    background: var(--yellow);
   }
 
   body.is-login .site-header {
@@ -80,24 +124,23 @@
   .brand-block {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.7rem;
     min-width: 0;
   }
 
   .brand-mark {
     flex: 0 0 auto;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 0.45rem;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 0.3rem;
     background: var(--yellow);
     color: #0a0a0a;
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     letter-spacing: 0.04em;
     display: grid;
     place-items: center;
-    box-shadow: 0 0 0 1px rgba(245, 197, 24, 0.35);
   }
 
   .brand-logo {
@@ -108,74 +151,21 @@
 
   .logo-svg {
     display: block;
-    width: 2.55rem;
-    height: 2.55rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 0 0 1px rgba(245, 197, 24, 0.4);
+    width: 2.45rem;
+    height: 2.45rem;
+    border-radius: 0.3rem;
   }
 
   .logo-svg--sm {
-    width: 2.55rem;
-    height: 2.55rem;
+    width: 2.45rem;
+    height: 2.45rem;
   }
 
   .logo-svg--hero {
-    width: clamp(4.5rem, 18vw, 5.75rem);
-    height: clamp(4.5rem, 18vw, 5.75rem);
-    border-radius: 1rem;
-    box-shadow:
-      0 0 0 1px rgba(245, 197, 24, 0.45),
-      0 16px 36px rgba(245, 197, 24, 0.22);
-  }
-
-  .login-logo-wrap {
-    display: flex;
-    justify-content: center;
-    margin: 0 auto 1rem;
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    flex: 0 0 auto;
-  }
-
-  .nav-toggle {
-    display: none;
-    align-items: center;
-    gap: 0.35rem;
-    min-height: 2.5rem;
-    min-width: 2.5rem;
-    padding: 0.4rem 0.55rem;
-    font: inherit;
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #0a0a0a;
-    background: var(--yellow);
-    border: none;
+    width: clamp(3.6rem, 12vw, 4.75rem);
+    height: clamp(3.6rem, 12vw, 4.75rem);
     border-radius: 0.45rem;
-    cursor: pointer;
-  }
-
-  .nav-toggle-bars {
-    display: block;
-    width: 1rem;
-    height: 0.7rem;
-    background:
-      linear-gradient(#0a0a0a, #0a0a0a) 0 0 / 100% 2px no-repeat,
-      linear-gradient(#0a0a0a, #0a0a0a) 0 50% / 100% 2px no-repeat,
-      linear-gradient(#0a0a0a, #0a0a0a) 0 100% / 100% 2px no-repeat;
-  }
-
-  .nav-toggle[aria-expanded='true'] .nav-toggle-bars {
-    background:
-      linear-gradient(#0a0a0a, #0a0a0a) 0 50% / 100% 2px no-repeat;
-  }
-
-  .nav-toggle-label {
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    margin: 0 0 1.25rem;
   }
 
   .brand-text {
@@ -185,113 +175,206 @@
   .brand-name {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 1.15rem;
+    font-size: 1.2rem;
     font-weight: 800;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--yellow);
-    line-height: 1.1;
+    line-height: 1.05;
   }
 
   .brand-sub {
-    margin: 0.12rem 0 0;
-    font-size: 0.74rem;
+    margin: 0.15rem 0 0;
+    font-size: 0.72rem;
+    font-weight: 500;
     color: var(--muted);
+    letter-spacing: 0.02em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 0 0 auto;
+  }
+
   .badge-test {
     flex: 0 0 auto;
-    max-width: 11rem;
+    max-width: 12rem;
     margin: 0;
-    padding: 0.38rem 0.55rem;
-    font-size: 0.58rem;
+    padding: 0.4rem 0.55rem;
+    font-size: 0.56rem;
     font-weight: 700;
     line-height: 1.25;
     text-align: center;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--badge-text);
     background: var(--badge-bg);
-    border: 1px solid var(--yellow-deep);
-    border-radius: 0.35rem;
+    border-radius: 0.2rem;
   }
 
-  /* —— Giriş (marka hero) —— */
+  .nav-toggle {
+    display: none;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.6rem;
+    min-width: 2.6rem;
+    padding: 0.45rem 0.65rem;
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: #0a0a0a;
+    background: var(--yellow);
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+  }
+
+  .nav-toggle-bars {
+    display: block;
+    width: 1.05rem;
+    height: 0.72rem;
+    background:
+      linear-gradient(#0a0a0a, #0a0a0a) 0 0 / 100% 2px no-repeat,
+      linear-gradient(#0a0a0a, #0a0a0a) 0 50% / 100% 2px no-repeat,
+      linear-gradient(#0a0a0a, #0a0a0a) 0 100% / 100% 2px no-repeat;
+  }
+
+  .nav-toggle[aria-expanded='true'] .nav-toggle-bars {
+    background: linear-gradient(#0a0a0a, #0a0a0a) 0 50% / 100% 2px no-repeat;
+  }
+
+  .nav-toggle-label {
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* —— Giriş: tam ekran kompozisyon —— */
+  .login-stage,
   .login-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 100vh;
+    min-height: 100svh;
     display: grid;
-    place-items: start center;
-    padding-top: 1.4rem;
-    gap: 1.35rem;
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-content: stretch;
+    justify-items: stretch;
+    gap: 1.25rem;
+    padding: clamp(1.35rem, 4.5vh, 2.75rem) clamp(1.1rem, 4vw, 2.5rem) clamp(1.25rem, 3.5vh, 2rem);
+    overflow: hidden;
+  }
+
+  .login-bleed {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .login-bleed-grid {
+    position: absolute;
+    inset: 0;
+    opacity: 0.55;
+    background-image:
+      linear-gradient(rgba(245, 197, 24, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245, 197, 24, 0.035) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 70% at 40% 30%, #000 20%, transparent 75%);
+  }
+
+  .login-bleed-wash {
+    position: absolute;
+    inset: -10%;
+    background:
+      radial-gradient(circle at 30% 20%, rgba(245, 197, 24, 0.16), transparent 42%),
+      radial-gradient(circle at 70% 90%, rgba(245, 197, 24, 0.06), transparent 40%);
+    animation: wash-drift 14s var(--ease) infinite alternate;
   }
 
   .login-hero {
+    position: relative;
+    z-index: 1;
+    align-self: end;
+    justify-self: start;
     width: 100%;
-    max-width: 26rem;
-    text-align: center;
-    padding: 0.4rem 0.25rem 0;
+    max-width: 42rem;
+    padding: 0;
+    margin: 0;
+    text-align: left;
   }
 
   .login-brand {
     margin: 0;
     font-family: var(--font-display);
-    font-size: clamp(2.15rem, 8.5vw, 3.1rem);
+    font-size: clamp(2.6rem, 11vw, 5.2rem);
     font-weight: 800;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--yellow);
-    line-height: 1.02;
-    text-shadow: 0 2px 24px rgba(245, 197, 24, 0.18);
+    line-height: 0.95;
   }
 
   .login-tagline {
-    margin: 0.55rem 0 0;
-    font-size: 0.95rem;
+    margin: 1rem 0 0;
+    max-width: 22rem;
+    font-size: clamp(0.95rem, 2.4vw, 1.15rem);
+    font-weight: 500;
     color: var(--muted);
     letter-spacing: 0.01em;
+    line-height: 1.4;
   }
 
   .login-badge {
-    display: inline-block;
-    margin-top: 0.9rem;
-    padding: 0.35rem 0.65rem;
-    font-size: 0.62rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: #0a0a0a;
-    background: var(--yellow);
-    border-radius: 0.3rem;
+    display: none;
   }
 
   .login-card {
+    position: relative;
+    z-index: 2;
     width: 100%;
-    max-width: 22rem;
-    padding: 1.55rem 1.3rem 1.35rem;
-    background: var(--bg-elevated);
-    border-radius: calc(var(--radius) + 0.1rem);
-    box-shadow: var(--shadow);
+    max-width: 24rem;
+    justify-self: start;
+    align-self: end;
+    padding: 1.45rem 1.35rem 1.25rem;
+    background: rgba(12, 12, 12, 0.94);
     border: 1px solid var(--surface-line);
+    border-top: 2px solid var(--yellow);
+    border-radius: var(--radius);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow);
   }
 
   .login-title {
-    margin: 0 0 0.3rem;
-    text-align: center;
+    margin: 0 0 0.25rem;
     font-family: var(--font-display);
-    font-size: 1.28rem;
+    font-size: 1.35rem;
     font-weight: 700;
     color: var(--text-strong);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
 
   .login-lead {
-    margin: 0 0 1.2rem;
-    text-align: center;
-    font-size: 0.88rem;
+    margin: 0 0 1.15rem;
+    font-size: 0.86rem;
     line-height: 1.45;
     color: var(--muted);
+  }
+
+  .login-env {
+    margin: 1rem 0 0;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--surface-line);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    line-height: 1.35;
   }
 
   .form-login {
@@ -302,10 +385,12 @@
   .form-login label,
   .form label {
     display: grid;
-    gap: 0.35rem;
-    font-size: 0.8rem;
+    gap: 0.38rem;
+    font-size: 0.74rem;
     font-weight: 700;
-    color: #c8c8c8;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #b8b4aa;
   }
 
   .form-login select,
@@ -313,16 +398,18 @@
   .form select,
   .form input {
     width: 100%;
-    padding: 0.75rem 0.85rem;
+    padding: 0.78rem 0.9rem;
     font: inherit;
-    font-size: 0.96rem;
+    font-size: 0.95rem;
     font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
     color: var(--text);
     background: var(--bg-input);
     border: 1px solid var(--border);
-    border-radius: 0.55rem;
+    border-radius: 0.3rem;
     outline: none;
-    transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
   }
 
   .form-login select option,
@@ -340,24 +427,24 @@
   }
 
   .btn {
-    margin-top: 0.15rem;
-    padding: 0.85rem 0.95rem;
+    margin-top: 0.2rem;
+    padding: 0.9rem 1rem;
     font: inherit;
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     color: #0a0a0a;
     background: var(--yellow);
     border: none;
-    border-radius: 0.55rem;
+    border-radius: 0.3rem;
     cursor: pointer;
-    transition: background 0.15s ease, transform 0.12s var(--ease), box-shadow 0.15s ease, filter 0.15s ease;
-    box-shadow: 0 8px 20px var(--yellow-glow);
+    transition: background 0.15s ease, transform 0.12s var(--ease), filter 0.15s ease;
   }
 
   .btn:hover {
     background: #ffd54a;
-    filter: brightness(1.03);
-    box-shadow: 0 10px 24px rgba(245, 197, 24, 0.32);
+    filter: brightness(1.02);
   }
 
   .btn:active {
@@ -367,14 +454,13 @@
   .btn:disabled {
     opacity: 0.55;
     cursor: wait;
-    box-shadow: none;
   }
 
   .btn-ghost {
     background: transparent;
     color: var(--muted);
     border: none;
-    padding: 0.4rem 0.45rem;
+    padding: 0.45rem 0.5rem;
     font: inherit;
     font-size: 0.82rem;
     font-weight: 600;
@@ -388,9 +474,9 @@
 
   .login-forgot {
     display: block;
-    margin: 1rem 0 0;
-    text-align: center;
-    font-size: 0.88rem;
+    margin: 0.95rem 0 0;
+    text-align: left;
+    font-size: 0.84rem;
     font-weight: 700;
     color: var(--yellow);
     background: none;
@@ -398,6 +484,7 @@
     cursor: pointer;
     font-family: inherit;
     width: 100%;
+    padding: 0;
   }
 
   .login-forgot:hover {
@@ -409,6 +496,8 @@
     font-size: 0.85rem;
     line-height: 1.35;
     font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
   }
 
   .form-msg.is-ok {
@@ -419,18 +508,18 @@
     color: var(--danger);
   }
 
-  /* —— Uygulama —— */
+  /* —— Uygulama kabuğu —— */
   .app-toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
-    margin-bottom: 0.8rem;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
   }
 
   .user-chip {
     margin: 0;
-    font-size: 0.84rem;
+    font-size: 0.88rem;
     color: var(--muted);
   }
 
@@ -441,23 +530,24 @@
 
   .role-pill {
     display: inline-block;
-    margin-left: 0.3rem;
-    padding: 0.14rem 0.45rem;
-    font-size: 0.68rem;
-    font-weight: 700;
+    margin-left: 0.35rem;
+    padding: 0.18rem 0.5rem;
+    font-size: 0.62rem;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     color: #0a0a0a;
     background: var(--yellow);
-    border-radius: 0.35rem;
+    border-radius: 0.2rem;
   }
 
   .tabs {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.28rem;
-    margin: 0 -0.15rem 0.9rem;
-    padding: 0.1rem 0.15rem 0.45rem;
+    gap: 0.15rem 0.1rem;
+    margin: 0 0 1.15rem;
+    padding: 0 0 0.55rem;
+    border-bottom: 1px solid var(--surface-line);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
@@ -469,7 +559,7 @@
   }
 
   .tabs::-webkit-scrollbar {
-    height: 0.35rem;
+    height: 0.3rem;
   }
 
   .tabs::-webkit-scrollbar-thumb {
@@ -480,42 +570,43 @@
   .tab {
     flex: 0 0 auto;
     margin: 0;
-    min-height: 2.4rem;
-    padding: 0.5rem 0.7rem;
+    min-height: 2.45rem;
+    padding: 0.55rem 0.75rem;
     font: inherit;
     font-size: 0.78rem;
     font-weight: 700;
+    letter-spacing: 0.02em;
     color: var(--muted);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: 0.4rem;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
     cursor: pointer;
     white-space: nowrap;
-    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.12s var(--ease);
+    transition: color 0.15s ease, border-color 0.15s ease;
   }
 
   .tab:hover {
-    border-color: rgba(245, 197, 24, 0.45);
     color: var(--text);
   }
 
   .tab:active {
-    transform: scale(0.97);
+    transform: none;
   }
 
   .tab.is-active {
-    color: #0a0a0a;
-    background: var(--yellow);
-    border-color: var(--yellow);
-    box-shadow: 0 4px 14px var(--yellow-glow);
+    color: var(--yellow);
+    background: transparent;
+    border-bottom-color: var(--yellow);
+    box-shadow: none;
   }
 
   .panel {
-    padding: 1.15rem 1.05rem 1.25rem;
-    background: var(--bg-panel);
-    border: 1px solid var(--surface-line);
-    border-radius: var(--radius);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+    padding: 0.15rem 0 0.5rem;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .tab-panel[hidden],
@@ -524,103 +615,118 @@
   }
 
   .section-title {
-    margin: 0 0 0.4rem;
+    margin: 0 0 0.45rem;
     font-family: var(--font-display);
-    font-size: 1.08rem;
+    font-size: 1.2rem;
     font-weight: 700;
     color: var(--text-strong);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
   }
 
   .section-title--sm {
-    margin-top: 1.1rem;
-    font-size: 0.92rem;
+    margin-top: 1.45rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--surface-line);
+    font-size: 0.95rem;
   }
 
   .hint {
-    margin: 0 0 0.9rem;
+    margin: 0 0 1rem;
     font-size: 0.84rem;
-    line-height: 1.4;
+    line-height: 1.45;
     color: var(--muted);
   }
 
   .hint code {
-    font-size: 0.78rem;
-    padding: 0.05rem 0.3rem;
+    font-size: 0.76rem;
+    padding: 0.08rem 0.32rem;
     background: var(--yellow-soft);
-    border-radius: 0.25rem;
+    border-radius: 0.2rem;
     color: var(--yellow);
   }
 
   .status {
-    margin: 0 0 1rem;
-    font-size: 1rem;
+    margin: 0 0 1.15rem;
+    font-family: var(--font-display);
+    font-size: 1.35rem;
     font-weight: 700;
     color: var(--text-strong);
+    letter-spacing: -0.02em;
   }
 
   .metric-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.55rem;
-    margin-bottom: 1rem;
+    gap: 0;
+    margin-bottom: 1.35rem;
+    border-top: 1px solid var(--surface-line);
+    border-bottom: 1px solid var(--surface-line);
   }
 
   .metric {
-    padding: 0.7rem 0.55rem;
-    text-align: center;
-    border-radius: 0.55rem;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
+    padding: 0.95rem 0.65rem 1rem;
+    text-align: left;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--surface-line);
+  }
+
+  .metric:last-child {
+    border-right: none;
   }
 
   .metric-label {
     display: block;
-    font-size: 0.64rem;
+    font-size: 0.62rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     color: var(--muted);
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.35rem;
   }
 
   .metric-value {
     display: block;
     font-family: var(--font-display);
-    font-size: 0.95rem;
+    font-size: 1.15rem;
     font-weight: 700;
     color: var(--yellow);
+    letter-spacing: -0.01em;
   }
 
   .meta {
-    margin: 0 0 1rem;
+    margin: 0 0 1.25rem;
     display: grid;
-    gap: 0.7rem;
+    gap: 0.85rem;
   }
 
   .meta div {
     display: grid;
-    gap: 0.12rem;
+    gap: 0.15rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--surface-line);
   }
 
   .meta dt {
-    font-size: 0.66rem;
+    font-size: 0.62rem;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.07em;
     color: var(--muted);
     font-weight: 700;
   }
 
   .meta dd {
     margin: 0;
-    font-size: 0.94rem;
+    font-size: 0.95rem;
     word-break: break-word;
   }
 
   .form {
     display: grid;
-    gap: 0.75rem;
-    margin-bottom: 0.65rem;
+    gap: 0.8rem;
+    margin-bottom: 0.75rem;
+    max-width: 28rem;
   }
 
   .list {
@@ -632,10 +738,10 @@
   }
 
   .list li {
-    padding: 0.72rem 0.15rem;
+    padding: 0.85rem 0.1rem;
     font-size: 0.9rem;
-    line-height: 1.35;
-    border-bottom: 1px solid var(--border);
+    line-height: 1.4;
+    border-bottom: 1px solid var(--surface-line);
     background: transparent;
   }
 
@@ -646,13 +752,13 @@
   .list .muted,
   .list-empty {
     color: var(--muted);
-    font-size: 0.82rem;
+    font-size: 0.84rem;
   }
 
   .list-empty {
     border-bottom: none !important;
-    padding-top: 0.85rem;
-    padding-bottom: 0.85rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
   }
 
   .borc-value {
@@ -678,8 +784,8 @@
 
   .tab-badge {
     display: inline-block;
-    margin-left: 0.2rem;
-    min-width: 1.1rem;
+    margin-left: 0.25rem;
+    min-width: 1.15rem;
     padding: 0.05rem 0.35rem;
     font-size: 0.62rem;
     font-weight: 800;
@@ -695,8 +801,8 @@
     padding: 0.12rem 0.4rem;
     font-size: 0.65rem;
     font-weight: 700;
-    border-radius: 0.3rem;
-    background: #2a2a2a;
+    border-radius: 0.2rem;
+    background: #1c1c1c;
     color: var(--muted);
   }
 
@@ -706,33 +812,33 @@
   }
 
   .badge-durum.is-ok {
-    background: rgba(245, 197, 24, 0.18);
+    background: rgba(245, 197, 24, 0.16);
     color: var(--yellow);
   }
 
   .badge-durum.is-err {
-    background: rgba(232, 93, 93, 0.18);
+    background: rgba(232, 93, 93, 0.16);
     color: var(--danger);
   }
 
   .row-actions {
-    margin-top: 0.4rem;
+    margin-top: 0.45rem;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
+    gap: 0.4rem;
   }
 
   .btn-sm {
     margin: 0;
-    min-height: 2.25rem;
-    padding: 0.45rem 0.75rem;
+    min-height: 2.3rem;
+    padding: 0.45rem 0.8rem;
     font: inherit;
-    font-size: 0.75rem;
+    font-size: 0.74rem;
     font-weight: 700;
     color: var(--yellow);
     background: transparent;
-    border: 1px solid rgba(245, 197, 24, 0.45);
-    border-radius: 0.4rem;
+    border: 1px solid var(--yellow-mid);
+    border-radius: 0.25rem;
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
   }
@@ -763,40 +869,52 @@
   .filter-row {
     display: flex;
     gap: 0.4rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.85rem;
   }
 
   .metric-row--4 {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  @media (min-width: 420px) {
+  .metric-row--4 .metric:nth-child(2n) {
+    border-right: none;
+  }
+
+  @media (min-width: 520px) {
     .metric-row--4 {
       grid-template-columns: repeat(4, 1fr);
+    }
+
+    .metric-row--4 .metric:nth-child(2n) {
+      border-right: 1px solid var(--surface-line);
+    }
+
+    .metric-row--4 .metric:last-child {
+      border-right: none;
     }
   }
 
   .chart-wrap {
-    margin: 0 0 0.9rem;
-    padding: 0.7rem 0.55rem 0.5rem;
-    border: 1px solid var(--border);
-    border-radius: 0.55rem;
+    margin: 0 0 1rem;
+    padding: 0.85rem 0.65rem 0.55rem;
+    border: 1px solid var(--surface-line);
+    border-radius: var(--radius);
     background: var(--bg-elevated);
   }
 
   .chart-title {
-    margin: 0 0 0.5rem;
-    font-size: 0.72rem;
+    margin: 0 0 0.55rem;
+    font-size: 0.68rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     color: var(--muted);
   }
 
   .chart-bars {
     display: flex;
     align-items: flex-end;
-    gap: 0.35rem;
+    gap: 0.4rem;
     min-height: 5.5rem;
     padding: 0 0.15rem;
   }
@@ -812,14 +930,14 @@
 
   .chart-bar {
     width: 100%;
-    max-width: 1.6rem;
-    border-radius: 0.25rem 0.25rem 0.1rem 0.1rem;
+    max-width: 1.5rem;
+    border-radius: 0.15rem 0.15rem 0 0;
     background: linear-gradient(180deg, #ffe066 0%, var(--yellow) 100%);
-    transition: height 0.35s var(--ease);
+    transition: height 0.4s var(--ease);
   }
 
   .chart-label {
-    font-size: 0.58rem;
+    font-size: 0.56rem;
     font-weight: 600;
     color: var(--muted);
     text-align: center;
@@ -831,39 +949,40 @@
     font-weight: 700;
   }
 
-  /* —— Yönetici tarih takvim tablosu —— */
+  /* —— Yönetici tarih —— */
   .date-range-pickers {
     display: grid;
-    gap: 0.85rem;
+    gap: 1rem;
   }
 
   @media (min-width: 640px) {
     .date-range-pickers {
       grid-template-columns: 1fr 1fr;
-      gap: 1rem;
     }
   }
 
   .date-picker {
     display: grid;
-    gap: 0.45rem;
-    padding: 0.75rem 0.7rem 0.65rem;
+    gap: 0.5rem;
+    padding: 0.85rem 0.75rem 0.7rem;
     background: var(--bg-elevated);
     border: 1px solid var(--border);
-    border-radius: 0.55rem;
+    border-radius: var(--radius);
   }
 
   .date-picker-label {
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     font-weight: 700;
-    color: #c8c8c8;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #b8b4aa;
   }
 
   .date-picker-value {
     margin: 0;
-    min-height: 1.35rem;
+    min-height: 1.4rem;
     font-family: var(--font-display);
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     font-weight: 700;
     letter-spacing: 0.02em;
     color: var(--yellow);
@@ -885,14 +1004,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.35rem;
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.45rem;
   }
 
   .date-cal-title {
     flex: 1;
     margin: 0;
     text-align: center;
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     font-weight: 700;
     color: var(--text-strong);
     text-transform: capitalize;
@@ -900,8 +1019,8 @@
 
   .date-cal-nav-btn {
     flex: 0 0 auto;
-    width: 2rem;
-    height: 2rem;
+    width: 2.2rem;
+    height: 2.2rem;
     padding: 0;
     font: inherit;
     font-size: 1rem;
@@ -910,7 +1029,7 @@
     color: var(--yellow);
     background: var(--bg-input);
     border: 1px solid var(--border);
-    border-radius: 0.4rem;
+    border-radius: 0.25rem;
     cursor: pointer;
     transition: border-color 0.18s var(--ease), background 0.18s var(--ease);
   }
@@ -929,10 +1048,10 @@
   }
 
   .date-cal-table th {
-    padding: 0.28rem 0;
-    font-size: 0.62rem;
+    padding: 0.3rem 0;
+    font-size: 0.6rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--muted);
     border-bottom: 1px solid var(--surface-line);
@@ -960,53 +1079,9 @@
     color: var(--text);
     background: transparent;
     border: 1px solid transparent;
-    border-radius: 0.35rem;
+    border-radius: 0.25rem;
     cursor: pointer;
     transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
-  }
-
-  /* —— Haftalık özet —— */
-  .digest-actions {
-    margin-bottom: 0.85rem;
-  }
-
-  .digest-card {
-    margin-top: 0.35rem;
-    padding: 0.85rem 0.75rem 1rem;
-    background: var(--bg-elevated);
-    border: 1px solid var(--surface-line);
-    border-radius: var(--radius);
-    animation: fade-in 0.35s var(--ease) both;
-  }
-
-  .digest-period {
-    margin: 0 0 0.85rem;
-    font-family: var(--font-display);
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--yellow);
-  }
-
-  .digest-giris {
-    margin: 0 0 0.35rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-strong);
-  }
-
-  .digest-metin {
-    margin: 0;
-    padding: 0.75rem 0.7rem;
-    font-family: var(--font);
-    font-size: 0.82rem;
-    line-height: 1.45;
-    white-space: pre-wrap;
-    word-break: break-word;
-    color: var(--text);
-    background: var(--bg-input);
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    overflow-x: auto;
   }
 
   .date-cal-day:hover,
@@ -1055,11 +1130,56 @@
     font-size: 0.75rem;
   }
 
+  /* —— Haftalık özet —— */
+  .digest-actions {
+    margin-bottom: 0.95rem;
+  }
+
+  .digest-card {
+    margin-top: 0.35rem;
+    padding: 0.25rem 0 0.5rem;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    animation: fade-in 0.35s var(--ease) both;
+  }
+
+  .digest-period {
+    margin: 0 0 0.95rem;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--yellow);
+  }
+
+  .digest-giris {
+    margin: 0 0 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-strong);
+  }
+
+  .digest-metin {
+    margin: 0;
+    padding: 0.9rem 0.85rem;
+    font-family: var(--font);
+    font-size: 0.84rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--yellow);
+    border-radius: var(--radius);
+    overflow-x: auto;
+  }
+
   /* —— Motion —— */
   @keyframes rise-in {
     from {
       opacity: 0;
-      transform: translateY(14px);
+      transform: translateY(18px);
     }
     to {
       opacity: 1;
@@ -1072,21 +1192,26 @@
     to { opacity: 1; }
   }
 
-  @keyframes pulse-soft {
-    0%, 100% {
-      transform: scale(1);
-      filter: drop-shadow(0 0 0 rgba(245, 197, 24, 0));
+  @keyframes mark-settle {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.94);
     }
-    50% {
-      transform: scale(1.03);
-      filter: drop-shadow(0 8px 18px rgba(245, 197, 24, 0.28));
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
     }
+  }
+
+  @keyframes wash-drift {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(2%, -1.5%, 0); }
   }
 
   @keyframes tab-slide {
     from {
       opacity: 0;
-      transform: translateY(8px);
+      transform: translateY(10px);
     }
     to {
       opacity: 1;
@@ -1095,33 +1220,46 @@
   }
 
   .anim-rise {
-    animation: rise-in 0.48s var(--ease) both;
+    animation: rise-in 0.55s var(--ease) both;
+    /* Görünür kal: animasyon kesilirse içerik kaybolmasın */
   }
 
   .anim-fade {
-    animation: fade-in 0.35s var(--ease) both;
+    animation: fade-in 0.4s var(--ease) both;
+  }
+
+  .anim-mark {
+    animation: mark-settle 0.7s var(--ease) 0.05s both;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .login-card.anim-rise {
+      /* Kart her zaman etkileşim için okunur — gecikmeli opacity riskini sınırla */
+      animation-duration: 0.45s;
+    }
   }
 
   .anim-pulse-soft {
-    animation: pulse-soft 2.8s var(--ease) 0.4s 2 both;
+    animation: none;
   }
 
   .login-hero.anim-rise {
-    animation-delay: 0.02s;
+    animation-delay: 0.04s;
   }
 
   .login-card.anim-rise {
-    animation-delay: 0.12s;
+    animation-delay: 0.16s;
   }
 
   .tab-panel.is-active {
-    animation: tab-slide 0.32s var(--ease) both;
+    animation: tab-slide 0.34s var(--ease) both;
   }
 
   @media (prefers-reduced-motion: reduce) {
     .anim-rise,
     .anim-fade,
-    .anim-pulse-soft,
+    .anim-mark,
+    .login-bleed-wash,
     .tab-panel.is-active,
     .digest-card,
     .tab,
@@ -1131,12 +1269,67 @@
     }
   }
 
-  /* —— Mobil (telefon öncelikli) —— */
+  @media (min-width: 860px) {
+    .login-stage,
+    .login-wrap {
+      grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 26rem);
+      grid-template-rows: 1fr;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3rem clamp(2rem, 6vw, 5rem);
+      gap: clamp(1.5rem, 4vw, 3.5rem);
+    }
+
+    .login-hero {
+      align-self: center;
+      padding: 0;
+      max-width: none;
+    }
+
+    .login-card {
+      justify-self: end;
+      align-self: center;
+      max-width: 26rem;
+      width: 100%;
+    }
+
+    .login-brand {
+      font-size: clamp(3.4rem, 6.5vw, 5.5rem);
+    }
+  }
+
+  /* —— Mobil —— */
   @media (max-width: 720px) {
     .page {
-      padding-left: 0.85rem;
-      padding-right: 0.85rem;
+      padding-left: 0.9rem;
+      padding-right: 0.9rem;
       overflow-x: hidden;
+    }
+
+    body.is-login .page {
+      padding: 0;
+    }
+
+    .login-stage,
+    .login-wrap {
+      padding: 1.15rem 1.05rem 1.1rem;
+      min-height: 100svh;
+      gap: 0.85rem;
+    }
+
+    .login-hero {
+      text-align: left;
+      align-self: end;
+    }
+
+    .login-brand {
+      font-size: clamp(2.2rem, 10vw, 2.85rem);
+    }
+
+    .logo-svg--hero {
+      width: 3.35rem;
+      height: 3.35rem;
+      margin-bottom: 0.85rem;
     }
 
     .site-header {
@@ -1145,8 +1338,8 @@
     }
 
     .badge-test {
-      max-width: 9.5rem;
-      font-size: 0.52rem;
+      max-width: 9rem;
+      font-size: 0.5rem;
       padding: 0.32rem 0.4rem;
     }
 
@@ -1162,9 +1355,9 @@
       display: none;
       flex-direction: column;
       flex-wrap: nowrap;
-      gap: 0.35rem;
-      margin: 0 0 0.85rem;
-      padding: 0.55rem;
+      gap: 0.2rem;
+      margin: 0 0 1rem;
+      padding: 0.45rem;
       max-height: min(78vh, 36rem);
       overflow-y: auto;
       overflow-x: hidden;
@@ -1184,12 +1377,20 @@
       justify-content: flex-start;
       text-align: left;
       min-height: 2.75rem;
-      font-size: 0.88rem;
-      padding: 0.65rem 0.85rem;
+      font-size: 0.9rem;
+      padding: 0.7rem 0.85rem;
+      border-bottom: none;
+      border-left: 3px solid transparent;
+    }
+
+    .tab.is-active {
+      background: var(--yellow-soft);
+      border-left-color: var(--yellow);
+      border-bottom-color: transparent;
     }
 
     .panel {
-      padding: 1rem 0.85rem 1.15rem;
+      padding: 0;
       overflow-x: hidden;
     }
 
@@ -1197,8 +1398,27 @@
       grid-template-columns: 1fr;
     }
 
+    .metric {
+      border-right: none;
+      border-bottom: 1px solid var(--surface-line);
+      padding-left: 0;
+    }
+
+    .metric:last-child {
+      border-bottom: none;
+    }
+
     .metric-row--4 {
       grid-template-columns: 1fr 1fr;
+    }
+
+    .metric-row--4 .metric:nth-child(odd) {
+      border-right: 1px solid var(--surface-line);
+      padding-right: 0.65rem;
+    }
+
+    .metric-row--4 .metric:nth-child(-n + 2) {
+      border-bottom: 1px solid var(--surface-line);
     }
 
     .form-login select,
@@ -1211,10 +1431,6 @@
 
     .date-range-pickers {
       grid-template-columns: 1fr;
-    }
-
-    .date-cal-table {
-      font-size: 0.85rem;
     }
 
     .chart-bars {
@@ -1233,41 +1449,45 @@
 
     #btn-logout {
       min-height: 2.5rem;
-      min-width: 2.5rem;
       padding: 0.45rem 0.65rem;
     }
   }
 
   @media (max-width: 390px) {
     .badge-test {
-      max-width: 7.5rem;
-      font-size: 0.5rem;
+      max-width: 7.2rem;
+      font-size: 0.48rem;
     }
 
     .brand-name {
-      font-size: 0.95rem;
-      letter-spacing: 0.06em;
-    }
-
-    .brand-sub {
-      font-size: 0.68rem;
-    }
-
-    .login-brand {
-      font-size: 1.85rem;
+      font-size: 0.98rem;
       letter-spacing: 0.08em;
     }
 
+    .brand-sub {
+      font-size: 0.66rem;
+    }
+
+    .login-brand {
+      font-size: 2.15rem;
+      letter-spacing: 0.06em;
+    }
+
     .login-card {
-      padding: 1.25rem 1rem 1.15rem;
+      padding: 1.2rem 1rem 1.1rem;
     }
 
     .metric-value {
-      font-size: 0.86rem;
+      font-size: 1.05rem;
     }
 
     .metric-row--4 {
       grid-template-columns: 1fr;
+    }
+
+    .metric-row--4 .metric:nth-child(odd) {
+      border-right: none;
+      padding-right: 0;
     }
   }
 </style>

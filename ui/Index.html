@@ -12,11 +12,10 @@
       <header class="site-header">
         <div class="brand-block">
           <span class="brand-logo" aria-hidden="true">
-            <svg class="logo-svg logo-svg--sm" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" focusable="false">
-              <rect width="64" height="64" rx="12" fill="#F5C518"/>
-              <path d="M32 10c-8.5 14-16 22.5-16 30a16 16 0 0032 0c0-7.5-7.5-16-16-30z" fill="#0a0a0a"/>
-              <path d="M32 28c-3.2 5.4-6 8.8-6 12.2a6 6 0 0012 0c0-3.4-2.8-6.8-6-12.2z" fill="#F5C518"/>
-              <text x="32" y="58" text-anchor="middle" font-family="Syne,sans-serif" font-size="9" font-weight="800" fill="#0a0a0a" letter-spacing="0.06em">AT</text>
+            <svg class="logo-svg logo-svg--sm" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" focusable="false">
+              <rect width="72" height="72" rx="10" fill="#F5C518"/>
+              <path d="M36 12c-9 15-18 24-18 33a18 18 0 0036 0c0-9-9-18-18-33z" fill="#0a0a0a"/>
+              <path d="M36 30c-3.5 5.8-6.5 9.5-6.5 13.2a6.5 6.5 0 0013 0c0-3.7-3-7.4-6.5-13.2z" fill="#F5C518"/>
             </svg>
           </span>
           <div class="brand-text">
@@ -33,24 +32,24 @@
         </div>
       </header>
 
-      <!-- Giriş — marka hero + etkileşim kartı -->
-      <div id="login-view" class="login-wrap">
+      <!-- Giriş — tam ekran marka sahnesi + giriş iskelesi -->
+      <div id="login-view" class="login-stage">
+        <div class="login-bleed" aria-hidden="true">
+          <div class="login-bleed-grid"></div>
+          <div class="login-bleed-wash"></div>
+        </div>
         <div class="login-hero anim-rise">
-          <div class="login-logo-wrap anim-pulse-soft" aria-hidden="true">
-            <svg class="logo-svg logo-svg--hero" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" focusable="false">
-              <rect width="64" height="64" rx="14" fill="#F5C518"/>
-              <path d="M32 10c-8.5 14-16 22.5-16 30a16 16 0 0032 0c0-7.5-7.5-16-16-30z" fill="#0a0a0a"/>
-              <path d="M32 28c-3.2 5.4-6 8.8-6 12.2a6 6 0 0012 0c0-3.4-2.8-6.8-6-12.2z" fill="#F5C518"/>
-              <text x="32" y="58" text-anchor="middle" font-family="Syne,sans-serif" font-size="9" font-weight="800" fill="#0a0a0a" letter-spacing="0.06em">AT</text>
-            </svg>
-          </div>
+          <svg class="logo-svg logo-svg--hero anim-mark" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true">
+            <rect width="72" height="72" rx="10" fill="#F5C518"/>
+            <path d="M36 12c-9 15-18 24-18 33a18 18 0 0036 0c0-9-9-18-18-33z" fill="#0a0a0a"/>
+            <path d="M36 30c-3.5 5.8-6.5 9.5-6.5 13.2a6.5 6.5 0 0013 0c0-3.7-3-7.4-6.5-13.2z" fill="#F5C518"/>
+          </svg>
           <p class="login-brand"><?= brandName ?></p>
           <p class="login-tagline"><?= brandSubtitle ?></p>
-          <span class="login-badge"><?= environmentLabel ?></span>
         </div>
-        <div class="login-card anim-rise">
+        <div class="login-card anim-rise" role="region" aria-label="Giriş formu">
           <h1 class="login-title">Güvenli giriş</h1>
-          <p class="login-lead">Yetkili hesabınızla panele girin. Test kodları canlı şifre değildir.</p>
+          <p class="login-lead">Yetkili hesap ile cari deftere girin. Test kodları canlı şifre değildir.</p>
           <form class="form-login" id="form-login" autocomplete="off">
             <label>
               Kullanıcı
@@ -74,6 +73,7 @@
             <p class="form-msg" id="msg-login" hidden></p>
           </form>
           <button type="button" class="login-forgot" id="btn-forgot">Şifremi unuttum</button>
+          <p class="login-env"><?= environmentLabel ?></p>
         </div>
       </div>
 
@@ -145,7 +145,7 @@
             </dl>
             <h2 class="section-title">Tedarikçi borçları</h2>
             <ul class="list debt-list" id="list-borc-ozet" hidden></ul>
-            <p class="hint">Sandbox özeti · aktif test tablosu (YOUR_SPREADSHEET_ID gerekmez). Vadeli ödemeler borcu düşürmez.</p>
+            <p class="hint">Test özeti · aktif sandbox tablosu. Vadeli ödemeler borcu düşürmez.</p>
           </section>
 
           <!-- Gelir -->
