@@ -73,12 +73,18 @@ function setupTestSheets() {
 
   var created = [];
   var skipped = [];
+  var mismatched = [];
 
   for (var i = 0; i < TEST_SAYFALARI.length; i++) {
     var tanim = TEST_SAYFALARI[i];
     var sheet = ss.getSheetByName(tanim.ad);
     if (sheet) {
-      skipped.push(tanim.ad);
+      var mismatch = checkHeaderMismatch_(sheet, tanim.basliklar);
+      if (mismatch) {
+        mismatched.push(tanim.ad + ' (' + mismatch + ')');
+      } else {
+        skipped.push(tanim.ad);
+      }
       continue;
     }
     sheet = ss.insertSheet(tanim.ad);
@@ -95,11 +101,18 @@ function setupTestSheets() {
   if (skipped.length) {
     parts.push('Zaten vardı (atlandı): ' + skipped.join(', '));
   }
+  if (mismatched.length) {
+    parts.push(
+      'Şema uyuşmazlığı (başlıklar yeniden yazılmadı): ' +
+        mismatched.join('; ')
+    );
+  }
   if (!parts.length) {
     parts.push('Değişiklik yok.');
   }
 
   var message = parts.join('\n');
+  var ok = mismatched.length === 0;
   try {
     SpreadsheetApp.getUi().alert('Aqua Tekel — Test sayfaları', message, SpreadsheetApp.getUi().ButtonSet.OK);
   } catch (e2) {
@@ -107,9 +120,43 @@ function setupTestSheets() {
   }
 
   return {
-    ok: true,
+    ok: ok,
     message: message,
     created: created,
-    skipped: skipped
+    skipped: skipped,
+    mismatched: mismatched
   };
+}
+
+/**
+ * Mevcut başlık satırı beklenenle aynı mı? Uyuşmazlıkta metin döner; sessiz yeniden yazmaz.
+ * @param {Sheet} sheet
+ * @param {Array<string>} expected
+ * @return {string|null}
+ */
+function checkHeaderMismatch_(sheet, expected) {
+  expected = expected || [];
+  var lastCol = Math.max(sheet.getLastColumn(), expected.length);
+  if (lastCol < 1) {
+    return 'başlık satırı boş';
+  }
+  var actual = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var a = [];
+  var i;
+  for (i = 0; i < expected.length; i++) {
+    a.push(String(actual[i] != null ? actual[i] : '').trim());
+  }
+  for (i = 0; i < expected.length; i++) {
+    if (a[i] !== String(expected[i])) {
+      return 'beklenen "' + expected[i] + '", bulunan "' + a[i] + '" (sütun ' +
+        (i + 1) + ')';
+    }
+  }
+  // Fazladan dolu sütun varsa uyar
+  for (i = expected.length; i < actual.length; i++) {
+    if (String(actual[i] != null ? actual[i] : '').trim()) {
+      return 'beklenmeyen ekstra sütun ' + (i + 1);
+    }
+  }
+  return null;
 }

@@ -145,12 +145,25 @@ function getPanelSummary() {
     messages.push(suppliers.message);
   }
 
-  var ok = !!(income && income.ok) || !!(expense && expense.ok) ||
-    !!(suppliers && suppliers.ok);
+  var incomeOk = !!(income && income.ok);
+  var expenseOk = !!(expense && expense.ok);
+  var suppliersOk = !!(suppliers && suppliers.ok);
+  // Hepsi başarılı olmalı; kısmi veri → ok:false (yanlış “tamam” yok)
+  var ok = incomeOk && expenseOk && suppliersOk;
+  var partial = !ok && (incomeOk || expenseOk || suppliersOk);
+  var message;
+  if (ok) {
+    message = 'Tamam';
+  } else if (messages.length) {
+    message = (partial ? 'Özet kısmi: ' : '') + messages[0];
+  } else {
+    message = 'Özet alınamadı.';
+  }
 
   return {
-    ok: ok || messages.length === 0,
-    message: messages.length ? messages[0] : 'Tamam',
+    ok: ok,
+    partial: partial,
+    message: message,
     gelirToplam: gelirToplam,
     giderToplam: giderToplam,
     tedarikciBorcToplam: tedarikciBorcToplam,

@@ -54,6 +54,37 @@ function rowInvoiceDedupKey(row) {
 }
 
 /**
+ * Ödeme çift anahtarı (yalnız tam eşleşme; benzer işlemleri engellemez).
+ * @param {Object} kayit
+ * @return {string}
+ */
+function buildPaymentDedupKey(kayit) {
+  kayit = kayit || {};
+  return [
+    normalizeKeyPart(kayit.tarih),
+    normalizeKeyPart(kayit.tedarikci),
+    normalizeKeyPart(parseTutar(kayit.tutar)),
+    normalizeKeyPart(normalizeOdemeYontemi(kayit.yontem)),
+    normalizeKeyPart(kayit.faturaNo)
+  ].join('|');
+}
+
+/**
+ * Satırdan ödeme anahtarı (Tarih, Tedarikçi, Tutar, Yöntem, FaturaNo).
+ * @param {Array<*>} row
+ * @return {string}
+ */
+function rowPaymentDedupKey(row) {
+  return buildPaymentDedupKey({
+    tarih: row[0],
+    tedarikci: row[1],
+    tutar: row[2],
+    yontem: row[3],
+    faturaNo: row[4]
+  });
+}
+
+/**
  * Kayıt daha önce eklenmiş mi?
  * @param {Object} kayit
  * @param {string} tur — 'gelir' | 'gider' | 'fatura'
@@ -78,6 +109,10 @@ function isDuplicate(kayit, tur) {
     sheetName = cfg.SHEETS.FATURALAR;
     keyFn = buildInvoiceDedupKey;
     rowKeyFn = rowInvoiceDedupKey;
+  } else if (tur === 'odeme') {
+    sheetName = cfg.SHEETS.ODEMELER;
+    keyFn = buildPaymentDedupKey;
+    rowKeyFn = rowPaymentDedupKey;
   } else {
     return false;
   }
@@ -112,9 +147,15 @@ function checkDedup(kayit, tur) {
     var tip = String(tur || '').toLowerCase();
     var msg;
     if (tip === 'fatura') {
-      msg = 'Bu fatura daha önce eklenmiş olabilir (FaturaNo + Tedarikçi).';
+      msg =
+        'Aynı fatura no + tedarikçi zaten var. Farklı bir fatura ise numarayı kontrol edin.';
+    } else if (tip === 'odeme') {
+      msg =
+        'Aynı tarih + tedarikçi + tutar + yöntem + fatura no zaten var. ' +
+        'Gerçekten ayrı bir ödeme ise not/tarihi ayırt edin.';
     } else {
-      msg = 'Bu kayıt daha önce eklenmiş olabilir (Tarih + Tutar + Açıklama).';
+      msg =
+        'Aynı tarih + tutar + açıklama zaten var. Farklı bir işlemse açıklamayı ayırt edin.';
     }
     return {
       ok: false,

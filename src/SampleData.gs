@@ -11,6 +11,19 @@
  * @return {{ok: boolean, message: string, added: Object}}
  */
 function loadSampleTestData() {
+  // Web App oturumu varsa yalnız patron; menüden (oturum yok) tablo sahibi çalıştırır.
+  // Canlı Sheets’e örnek veri yazılmaz — yalnız aktif test tablosu.
+  try {
+    if (typeof getSessionUser_ === 'function' && getSessionUser_()) {
+      var deniedSample = denyUnlessManager();
+      if (deniedSample) {
+        return deniedSample;
+      }
+    }
+  } catch (eAuth) {
+    // Auth yoksa menü yolu devam
+  }
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) {
     var noSs =
@@ -354,11 +367,16 @@ function ensureSampleSheets_(ss, cfg) {
     { ad: cfg.SHEETS.FATURALAR, basliklar: cfg.HEADERS.FATURALAR },
     { ad: cfg.SHEETS.ODEMELER, basliklar: cfg.HEADERS.ODEMELER },
     { ad: cfg.SHEETS.KULLANICILAR, basliklar: cfg.HEADERS.KULLANICILAR },
-    { ad: cfg.SHEETS.ONAYLAR, basliklar: cfg.HEADERS.ONAYLAR }
+    { ad: cfg.SHEETS.ONAYLAR, basliklar: cfg.HEADERS.ONAYLAR },
+    { ad: cfg.SHEETS.GIRIS_LOG, basliklar: cfg.HEADERS.GIRIS_LOG }
   ];
   for (var i = 0; i < defs.length; i++) {
     var d = defs[i];
+    if (!d.ad || !d.basliklar) {
+      continue;
+    }
     if (ss.getSheetByName(d.ad)) {
+      // Var olan sayfada başlığı sessizce yeniden yazma
       continue;
     }
     var sheet = ss.insertSheet(d.ad);

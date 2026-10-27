@@ -44,19 +44,102 @@ function normalizeKeyPart(deger) {
 }
 
 /**
- * Tutarı sayıya çevirir; geçersizse NaN.
+ * Tutarı sayıya çevirir; geçersizse NaN (sessiz 0 yok).
+ * TR: 1.234,56 · 1234,56 · US: 1,234.56 · düz: 1234.5
  * @param {*} deger
  * @return {number}
  */
 function parseTutar(deger) {
   if (typeof deger === 'number') {
-    return deger;
+    return isFinite(deger) ? deger : NaN;
   }
   if (deger === null || deger === undefined || deger === '') {
     return NaN;
   }
-  var s = String(deger).replace(/\s/g, '').replace(',', '.');
-  return Number(s);
+  var s = String(deger)
+    .replace(/\s/g, '')
+    .replace(/₺/g, '')
+    .replace(/TL/gi, '');
+  if (!s || s === '-' || s === '.' || s === ',') {
+    return NaN;
+  }
+  var lastComma = s.lastIndexOf(',');
+  var lastDot = s.lastIndexOf('.');
+  if (lastComma >= 0 && lastDot >= 0) {
+    if (lastComma > lastDot) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      s = s.replace(/,/g, '');
+    }
+  } else if (lastComma >= 0) {
+    var afterC = s.length - lastComma - 1;
+    if (afterC <= 0) return NaN;
+    if (afterC <= 2) {
+      s = s.replace(',', '.');
+    } else {
+      s = s.replace(/,/g, '');
+    }
+  } else if (lastDot >= 0) {
+    if (/^\d{1,3}(\.\d{3})+$/.test(s)) {
+      s = s.replace(/\./g, '');
+    }
+  }
+  if (!/^-?\d+(\.\d+)?$/.test(s)) {
+    return NaN;
+  }
+  var n = Number(s);
+  return isFinite(n) ? n : NaN;
+}
+
+/**
+ * Tutarı TR gösterim metnine çevirir.
+ * @param {number} n
+ * @return {string}
+ */
+function formatTutarTr(n) {
+  if (n == null || isNaN(Number(n))) {
+    return '—';
+  }
+  return (Math.round(Number(n) * 100) / 100).toLocaleString('tr-TR');
+}
+
+/**
+ * Script kilidi ile kritik yazma (çift tıklama / eşzamanlı).
+ * @param {function(): Object} fn
+ * @return {Object}
+ */
+function withScriptLock_(fn) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+  } catch (e) {
+    return {
+      ok: false,
+      message: 'Sistem meşgul. Lütfen birkaç saniye sonra tekrar deneyin.'
+    };
+  }
+  try {
+    return fn();
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (e2) {
+      // yok say
+    }
+  }
+}
+
+/**
+ * Dekont URL’sini güvenli tut (yalnız http(s) veya /uploads/).
+ * @param {*} url
+ * @return {string}
+ */
+function sanitizeDekontUrl(url) {
+  var u = String(url == null ? '' : url).trim();
+  if (!u) return '';
+  if (/^https?:\/\//i.test(u)) return u;
+  if (u.indexOf('/uploads/') === 0) return u;
+  return '';
 }
 
 /**

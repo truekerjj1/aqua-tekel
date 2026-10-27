@@ -11,43 +11,45 @@
  * @return {{ok: boolean, message: string, duplicate?: boolean}}
  */
 function addIncome(kayit) {
-  // Gelir: patron veya personel (requirePersonelOrPatron).
-  var denied = denyUnlessWriter();
-  if (denied) {
-    return denied;
-  }
+  return withScriptLock_(function () {
+    // Gelir: patron veya personel (requirePersonelOrPatron).
+    var denied = denyUnlessWriter();
+    if (denied) {
+      return denied;
+    }
 
-  kayit = kayit || {};
-  var tutar = parseTutar(kayit.tutar);
-  if (!kayit.tarih || !kayit.aciklama || isNaN(tutar)) {
-    return {
-      ok: false,
-      message: 'Gelir için tarih, tutar ve açıklama gerekli.'
-    };
-  }
+    kayit = kayit || {};
+    var tutar = parseTutar(kayit.tutar);
+    if (!kayit.tarih || !kayit.aciklama || isNaN(tutar)) {
+      return {
+        ok: false,
+        message: 'Gelir için tarih, tutar ve açıklama gerekli.'
+      };
+    }
 
-  var dedup = checkDedup(kayit, 'gelir');
-  if (!dedup.ok) {
-    return dedup;
-  }
+    var dedup = checkDedup(kayit, 'gelir');
+    if (!dedup.ok) {
+      return dedup;
+    }
 
-  var cfg = getConfig();
-  var got = getSandboxSheet(cfg.SHEETS.GELIR);
-  if (!got.ok) {
-    return { ok: false, message: got.message };
-  }
+    var cfg = getConfig();
+    var got = getSandboxSheet(cfg.SHEETS.GELIR);
+    if (!got.ok) {
+      return { ok: false, message: got.message };
+    }
 
-  got.sheet.appendRow([
-    kayit.tarih,
-    tutar,
-    String(kayit.aciklama),
-    kayit.kategori || '',
-    kayit.kaynak || '',
-    kayit.not || '',
-    currentActorLabel_()
-  ]);
+    got.sheet.appendRow([
+      kayit.tarih,
+      tutar,
+      String(kayit.aciklama),
+      kayit.kategori || '',
+      kayit.kaynak || '',
+      kayit.not || '',
+      currentActorLabel_()
+    ]);
 
-  return { ok: true, message: 'Gelir kaydı eklendi.' };
+    return { ok: true, message: 'Gelir kaydı eklendi.' };
+  });
 }
 
 /**
@@ -120,7 +122,8 @@ function updateIncome(id, kayit) {
   var kategori = kayit.kategori !== undefined ? kayit.kategori : existing[3];
   var kaynak = kayit.kaynak !== undefined ? kayit.kaynak : existing[4];
   var not = kayit.not !== undefined ? kayit.not : existing[5];
-  var kullanici = kayit.kullanici !== undefined ? kayit.kullanici : existing[6];
+  // Kullanıcı istemciden yükseltilmesin
+  var kullanici = existing[6];
 
   if (isNaN(parseTutar(tutar))) {
     return { ok: false, message: 'Geçersiz tutar.' };

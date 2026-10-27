@@ -101,6 +101,18 @@ Başlık satırları `Bootstrap.gs` / `Config.gs` ile aynı olmalıdır.
 
 > `Config.TEST_USERS` ile senkron. Kodlar sandbox kolaylığı içindir; üretime taşınmaz.
 
+### GirisLog
+
+| Sütun | Açıklama |
+|--------|----------|
+| Tarih | Giriş tarihi |
+| Saat | Giriş saati |
+| UserId | Panel kullanıcı id |
+| Ad | Görünen ad |
+| Rol | patron / personel |
+
+> `Config.SHEETS.GIRIS_LOG` / `HEADERS.GIRIS_LOG` ile Bootstrap aynı olmalı. Haftalık özet için kullanılır.
+
 ---
 
 ## Tedarikçi kalan borç kuralı
@@ -133,6 +145,7 @@ KalanBorc(tedarikçi) = Σ Faturalar.Tutar − Σ Odemeler.Tutar(yöntem ∈ {Na
 |-----|---------|
 | Gelir / Gider | `Tarih` + `Tutar` + `Açıklama` |
 | Fatura | `FaturaNo` + `Tedarikçi` |
+| Ödeme | `Tarih` + `Tedarikçi` + `Tutar` + `Yöntem` + `FaturaNo` (yalnız tam eşleşme) |
 
 ---
 

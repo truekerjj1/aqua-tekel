@@ -262,12 +262,55 @@ function updateSupplier(id, tedarikci) {
     }
   }
 
+  var oldAd = String(existing[0] != null ? existing[0] : '').trim();
+  if (normalizeKeyPart(oldAd) !== normalizeKeyPart(ad)) {
+    // Ad değiştiyse fatura/ödeme satırlarındaki adı da güncelle (bakiye bütünlüğü)
+    renameSupplierRefs_(got.ss, oldAd, ad);
+  }
+
   var kalan = computeSupplierBalance(ad, got.ss);
   got.sheet.getRange(rowNum, 1, rowNum, 5).setValues([[
     ad, telefon, not, kalan, aktif
   ]]);
 
+  if (normalizeKeyPart(oldAd) !== normalizeKeyPart(ad) && oldAd) {
+    refreshSupplierBalances(oldAd);
+  }
+
   return { ok: true, message: 'Tedarikçi güncellendi.' };
+}
+
+/**
+ * Fatura / ödeme satırlarındaki tedarikçi adını yeniden adlandırır.
+ * @param {Spreadsheet} ss
+ * @param {string} oldAd
+ * @param {string} newAd
+ */
+function renameSupplierRefs_(ss, oldAd, newAd) {
+  var cfg = getConfig();
+  var oldKey = normalizeKeyPart(oldAd);
+  var inv = ss.getSheetByName(cfg.SHEETS.FATURALAR);
+  var pay = ss.getSheetByName(cfg.SHEETS.ODEMELER);
+  var i;
+  var r;
+  if (inv) {
+    var fRows = getDataRows(inv);
+    for (i = 0; i < fRows.length; i++) {
+      r = fRows[i];
+      if (normalizeKeyPart(r[2]) === oldKey) {
+        inv.getRange(i + 2, 3).setValue(newAd);
+      }
+    }
+  }
+  if (pay) {
+    var oRows = getDataRows(pay);
+    for (i = 0; i < oRows.length; i++) {
+      r = oRows[i];
+      if (normalizeKeyPart(r[1]) === oldKey) {
+        pay.getRange(i + 2, 2).setValue(newAd);
+      }
+    }
+  }
 }
 
 /**

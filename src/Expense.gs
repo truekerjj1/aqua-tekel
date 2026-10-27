@@ -12,51 +12,53 @@
  * @return {{ok: boolean, message: string, duplicate?: boolean}}
  */
 function addExpense(kayit) {
-  // Gider: patron veya personel (requirePersonelOrPatron).
-  var denied = denyUnlessWriter();
-  if (denied) {
-    return denied;
-  }
+  return withScriptLock_(function () {
+    // Gider: patron veya personel (requirePersonelOrPatron).
+    var denied = denyUnlessWriter();
+    if (denied) {
+      return denied;
+    }
 
-  kayit = kayit || {};
-  var tutar = parseTutar(kayit.tutar);
-  if (!kayit.tarih || !kayit.aciklama || isNaN(tutar)) {
-    return {
-      ok: false,
-      message: 'Gider için tarih, tutar ve açıklama gerekli.'
-    };
-  }
+    kayit = kayit || {};
+    var tutar = parseTutar(kayit.tutar);
+    if (!kayit.tarih || !kayit.aciklama || isNaN(tutar)) {
+      return {
+        ok: false,
+        message: 'Gider için tarih, tutar ve açıklama gerekli.'
+      };
+    }
 
-  var kategori = String(kayit.kategori || '').trim();
-  if (!kategori) {
-    return {
-      ok: false,
-      message: 'Gider için kategori seçin.'
-    };
-  }
+    var kategori = String(kayit.kategori || '').trim();
+    if (!kategori) {
+      return {
+        ok: false,
+        message: 'Gider için kategori seçin.'
+      };
+    }
 
-  var dedup = checkDedup(kayit, 'gider');
-  if (!dedup.ok) {
-    return dedup;
-  }
+    var dedup = checkDedup(kayit, 'gider');
+    if (!dedup.ok) {
+      return dedup;
+    }
 
-  var cfg = getConfig();
-  var got = getSandboxSheet(cfg.SHEETS.GIDER);
-  if (!got.ok) {
-    return { ok: false, message: got.message };
-  }
+    var cfg = getConfig();
+    var got = getSandboxSheet(cfg.SHEETS.GIDER);
+    if (!got.ok) {
+      return { ok: false, message: got.message };
+    }
 
-  // Sütunlar: Tarih, Tutar, Açıklama, Kategori, Not, Kullanici (tedarikçi yok)
-  got.sheet.appendRow([
-    kayit.tarih,
-    tutar,
-    String(kayit.aciklama),
-    kategori,
-    kayit.not || '',
-    currentActorLabel_()
-  ]);
+    // Sütunlar: Tarih, Tutar, Açıklama, Kategori, Not, Kullanici (tedarikçi yok)
+    got.sheet.appendRow([
+      kayit.tarih,
+      tutar,
+      String(kayit.aciklama),
+      kategori,
+      kayit.not || '',
+      currentActorLabel_()
+    ]);
 
-  return { ok: true, message: 'Gider kaydı eklendi.' };
+    return { ok: true, message: 'Gider kaydı eklendi.' };
+  });
 }
 
 /**
@@ -133,7 +135,8 @@ function updateExpense(id, kayit) {
   var aciklama = kayit.aciklama !== undefined ? kayit.aciklama : existing[2];
   var kategori = kayit.kategori !== undefined ? kayit.kategori : existing[3];
   var not = kayit.not !== undefined ? kayit.not : existing[4];
-  var kullanici = kayit.kullanici !== undefined ? kayit.kullanici : existing[5];
+  // Kullanıcı istemciden yükseltilmesin
+  var kullanici = existing[5];
 
   if (isNaN(parseTutar(tutar))) {
     return { ok: false, message: 'Geçersiz tutar.' };
