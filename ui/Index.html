@@ -468,6 +468,31 @@
         </main>
       </div>
     </div>
+
+    <!-- Sunucu / bağlantı uyarısı -->
+    <div id="conn-toast" class="conn-toast" role="alert" aria-live="assertive" hidden>
+      <p class="conn-toast-text" id="conn-toast-text">Sunucuya erişilemiyor. Lütfen yöneticiye bildirin.</p>
+      <button type="button" class="conn-toast-close" id="conn-toast-close" aria-label="Kapat">Kapat</button>
+    </div>
+
+    <!-- İlk giriş: nasıl kullanılır -->
+    <div id="onboard-overlay" class="onboard-overlay" hidden>
+      <div class="onboard-panel anim-rise" role="dialog" aria-modal="true" aria-labelledby="onboard-title">
+        <p class="onboard-kicker">Aqua Tekel</p>
+        <h2 class="onboard-title" id="onboard-title">Nasıl kullanılır?</h2>
+        <p class="onboard-lead" id="onboard-lead">Kısa bir tur — üç adım.</p>
+        <ol class="onboard-steps" id="onboard-steps">
+          <li></li>
+          <li></li>
+          <li></li>
+        </ol>
+        <div class="onboard-actions">
+          <button type="button" class="btn" id="onboard-ok">Anladım</button>
+          <button type="button" class="btn-ghost" id="onboard-skip">Atla</button>
+        </div>
+      </div>
+    </div>
+
     <?!= include('ui/Client'); ?>
   </body>
 </html>

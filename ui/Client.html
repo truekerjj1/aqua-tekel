@@ -94,6 +94,134 @@
       el.classList.toggle('is-err', !ok);
     }
 
+    var SERVER_UNREACHABLE =
+      'Sunucuya erişilemiyor. Lütfen yöneticiye bildirin.';
+    var ONBOARD_KEY_PREFIX = 'aqua_tekel_onboard_v1_';
+    var connToast = document.getElementById('conn-toast');
+    var connToastText = document.getElementById('conn-toast-text');
+    var connToastClose = document.getElementById('conn-toast-close');
+    var onboardOverlay = document.getElementById('onboard-overlay');
+    var connToastTimer = null;
+    var offlineToastShown = false;
+
+    function showServerUnreachable() {
+      if (connToastText) {
+        connToastText.textContent = SERVER_UNREACHABLE;
+      }
+      if (connToast) connToast.hidden = false;
+      if (connToastTimer) clearTimeout(connToastTimer);
+      connToastTimer = setTimeout(function () {
+        if (connToast) connToast.hidden = true;
+      }, 9000);
+    }
+
+    function hideConnToast() {
+      if (connToastTimer) clearTimeout(connToastTimer);
+      if (connToast) connToast.hidden = true;
+    }
+
+    /** google.script.run / fetch hata yakalayıcı — sessiz bırakma. */
+    function rpcFail(msgId, extra) {
+      return function () {
+        showServerUnreachable();
+        if (msgId) setMsg(msgId, SERVER_UNREACHABLE, false);
+        if (typeof extra === 'function') {
+          try {
+            extra.apply(null, arguments);
+          } catch (e) {
+            /* yoksay */
+          }
+        }
+      };
+    }
+
+    function requireGas(msgId) {
+      if (hasGas()) return true;
+      showServerUnreachable();
+      if (msgId) setMsg(msgId, SERVER_UNREACHABLE, false);
+      return false;
+    }
+
+    window.__aquaRpcFail = showServerUnreachable;
+
+    function onboardStorageKey(userId) {
+      return ONBOARD_KEY_PREFIX + String(userId || '');
+    }
+
+    function hasSeenOnboarding(userId) {
+      if (!userId) return true;
+      try {
+        return localStorage.getItem(onboardStorageKey(userId)) === '1';
+      } catch (e) {
+        return true;
+      }
+    }
+
+    function markOnboardingDone(userId) {
+      if (!userId) return;
+      try {
+        localStorage.setItem(onboardStorageKey(userId), '1');
+      } catch (e) {
+        /* yoksay */
+      }
+    }
+
+    function fillOnboarding(session) {
+      var patron = isPatron(session);
+      var lead = document.getElementById('onboard-lead');
+      var steps = document.querySelectorAll('#onboard-steps li');
+      if (lead) {
+        lead.textContent = patron
+          ? 'Patron hesabınız için üç kısa adım.'
+          : 'Personel hesabınız için üç kısa adım.';
+      }
+      var texts = patron
+        ? [
+            'Gelir, gider, ödeme veya fatura ekleyin — günlük işlem sekmelerinden.',
+            'Personel kayıtlarını Onay sekmesinde inceleyin; onaylayın veya reddedin.',
+            'Yönetici ve Haftalık Özet ile firma, tarih ve Pazartesi brifingini takip edin.'
+          ]
+        : [
+            'Gelir, gider, ödeme veya fatura ekleyin — kayıtlarınız onaya düşebilir.',
+            'Profil sekmesinde kendi son işlemlerinizi ve onay durumunu görün.',
+            'Tedarikçi / yönetici sekmeleri yalnız patron içindir; günlük işiniz bu panelde.'
+          ];
+      for (var i = 0; i < steps.length; i++) {
+        steps[i].textContent = texts[i] || '';
+      }
+    }
+
+    function dismissOnboarding() {
+      if (onboardOverlay) onboardOverlay.hidden = true;
+      if (currentSession && currentSession.id) {
+        markOnboardingDone(currentSession.id);
+      }
+    }
+
+    function maybeShowOnboarding(session) {
+      if (!session || !session.id) return;
+      if (hasSeenOnboarding(session.id)) return;
+      fillOnboarding(session);
+      if (onboardOverlay) onboardOverlay.hidden = false;
+    }
+
+    if (connToastClose) {
+      connToastClose.addEventListener('click', hideConnToast);
+    }
+    var onboardOk = document.getElementById('onboard-ok');
+    var onboardSkip = document.getElementById('onboard-skip');
+    if (onboardOk) onboardOk.addEventListener('click', dismissOnboarding);
+    if (onboardSkip) onboardSkip.addEventListener('click', dismissOnboarding);
+
+    window.addEventListener('offline', function () {
+      if (offlineToastShown) return;
+      offlineToastShown = true;
+      showServerUnreachable();
+    });
+    window.addEventListener('online', function () {
+      offlineToastShown = false;
+    });
+
     function closeMobileNav() {
       if (tabNav) tabNav.classList.remove('is-open');
       if (navToggle) navToggle.setAttribute('aria-expanded', 'false');
@@ -122,6 +250,7 @@
       }
       if (navToggle) navToggle.hidden = false;
       closeMobileNav();
+      maybeShowOnboarding(session);
     }
 
     function applyRoleUi(session) {
@@ -380,9 +509,7 @@
       if (!hasGas()) return;
       google.script.run
         .withSuccessHandler(gosterOzet)
-        .withFailureHandler(function () {
-          hata('Özet yenilenemedi.');
-        })
+        .withFailureHandler(rpcFail(null, function () { hata(SERVER_UNREACHABLE); }))
         .getPanelData();
     }
 
@@ -454,9 +581,7 @@
           }
           onOk({ fileId: res.fileId || '', url: res.url || '' });
         })
-        .withFailureHandler(function () {
-          onFail('Dekont yüklenemedi.');
-        })
+        .withFailureHandler(rpcFail(null, function () { onFail(SERVER_UNREACHABLE); }))
         .uploadDekont(payload);
     }
 
@@ -543,9 +668,7 @@
             );
           });
         })
-        .withFailureHandler(function () {
-          setMsg('msg-gelir', 'Gelir listesi alınamadı.', false);
-        })
+        .withFailureHandler(rpcFail('msg-gelir'))
         .listIncome({});
     }
 
@@ -572,9 +695,7 @@
             );
           });
         })
-        .withFailureHandler(function () {
-          setMsg('msg-gider', 'Gider listesi alınamadı.', false);
-        })
+        .withFailureHandler(rpcFail('msg-gider'))
         .listExpense({});
     }
 
@@ -589,7 +710,7 @@
             fillExpenseCategories(res.categories || []);
           }
         })
-        .withFailureHandler(function () {})
+        .withFailureHandler(rpcFail())
         .listExpenseCategories();
     }
 
@@ -622,9 +743,7 @@
             );
           });
         })
-        .withFailureHandler(function () {
-          setMsg('msg-odeme', 'Ödeme listesi alınamadı.', false);
-        })
+        .withFailureHandler(rpcFail('msg-odeme'))
         .listPayments({});
     }
 
@@ -661,9 +780,7 @@
             );
           });
         })
-        .withFailureHandler(function () {
-          setMsg('msg-fatura', 'Fatura listesi alınamadı.', false);
-        })
+        .withFailureHandler(rpcFail('msg-fatura'))
         .listInvoices({});
     }
 
@@ -675,7 +792,7 @@
             fillSupplierSelects(res.rows || []);
           }
         })
-        .withFailureHandler(function () {})
+        .withFailureHandler(rpcFail())
         .listSuppliers();
     }
 
@@ -714,9 +831,7 @@
           fillSupplierSelects(res.rows || []);
           renderList('list-tedarikci', realSupplierRows(res.rows), debtItemHtml);
         })
-        .withFailureHandler(function () {
-          setMsg('msg-tedarikci', 'Tedarikçi listesi alınamadı.', false);
-        })
+        .withFailureHandler(rpcFail('msg-tedarikci'))
         .listSuppliers();
     }
 
@@ -747,6 +862,7 @@
                 'Kaydet';
               document.getElementById('btn-tedarikci-iptal').hidden = false;
             })
+            .withFailureHandler(rpcFail('msg-tedarikci'))
             .listSuppliers();
         }
         if (del) {
@@ -759,9 +875,7 @@
               setMsg('msg-tedarikci', res.message || '', !!res.ok);
               if (res.ok) loadTedarikci();
             })
-            .withFailureHandler(function () {
-              setMsg('msg-tedarikci', 'Silinemedi.', false);
-            })
+            .withFailureHandler(rpcFail('msg-tedarikci'))
             .deleteSupplier(del);
         }
       });
@@ -784,9 +898,7 @@
           setMsg('msg-profil', '', true);
           renderList('list-profil', res.rows, activityItemHtml);
         })
-        .withFailureHandler(function () {
-          setMsg('msg-profil', 'Son işlemler alınamadı.', false);
-        })
+        .withFailureHandler(rpcFail('msg-profil'))
         .getMyRecentActivity({ limit: 30 });
     }
 
@@ -800,7 +912,7 @@
           badge.hidden = n < 1;
           badge.textContent = String(n);
         })
-        .withFailureHandler(function () {})
+        .withFailureHandler(rpcFail())
         .countPendingApprovals();
     }
 
@@ -846,9 +958,7 @@
           });
           refreshOnayBadge();
         })
-        .withFailureHandler(function () {
-          setMsg('msg-onay', 'Onay listesi alınamadı.', false);
-        })
+        .withFailureHandler(rpcFail('msg-onay'))
         .listApprovals(filtre);
     }
 
@@ -876,6 +986,7 @@
               setMsg('msg-onay', res.message || '', !!res.ok);
               loadOnay();
             })
+            .withFailureHandler(rpcFail('msg-onay'))
             .decideApproval(okId, 'Onaylandi');
         }
         if (redId) {
@@ -884,6 +995,7 @@
               setMsg('msg-onay', res.message || '', !!res.ok);
               loadOnay();
             })
+            .withFailureHandler(rpcFail('msg-onay'))
             .decideApproval(redId, 'Red');
         }
       });
@@ -940,6 +1052,7 @@
           if (f) f.textContent = formatTutar(res.fatura);
           if (o) o.textContent = formatTutar(res.odeme);
         })
+        .withFailureHandler(rpcFail(null))
         .getAdminTodaySummary();
 
       google.script.run
@@ -948,6 +1061,7 @@
           renderBarChart('chart-fatura', res.labels, res.fatura, 'Aylık fatura');
           renderBarChart('chart-odeme', res.labels, res.odeme, 'Aylık ödeme');
         })
+        .withFailureHandler(rpcFail(null))
         .getAdminMonthlyCharts();
 
       google.script.run
@@ -958,6 +1072,7 @@
             activityItemHtml
           );
         })
+        .withFailureHandler(rpcFail(null))
         .getAdminRecentActivity({ limit: 40 });
 
       loadAdminUsers();
@@ -1043,9 +1158,7 @@
           setMsg('msg-haftalik', res.message || '', true);
           renderDigest(res.digest || null);
         })
-        .withFailureHandler(function () {
-          setMsg('msg-haftalik', 'Haftalık özet yüklenemedi.', false);
-        })
+        .withFailureHandler(rpcFail('msg-haftalik'))
         .getLastWeeklyDigest();
     }
 
@@ -1064,10 +1177,7 @@
             );
             renderDigest(res && res.digest ? res.digest : null);
           })
-          .withFailureHandler(function () {
-            btnDigestSimule.disabled = false;
-            setMsg('msg-haftalik', 'Simülasyon başarısız.', false);
-          })
+          .withFailureHandler(rpcFail('msg-haftalik', function () { btnDigestSimule.disabled = false; }))
           .runWeeklyDigest({ sendEmail: false });
       });
     }
@@ -1119,6 +1229,7 @@
             );
           });
         })
+        .withFailureHandler(rpcFail('msg-admin-user'))
         .listUsersAdmin();
     }
 
@@ -1147,6 +1258,7 @@
               document.getElementById('btn-user-kaydet').textContent = 'Kaydet';
               document.getElementById('btn-user-iptal').hidden = false;
             })
+            .withFailureHandler(rpcFail('msg-admin-user'))
             .listUsersAdmin();
         }
         if (delId) {
@@ -1156,6 +1268,7 @@
               setMsg('msg-admin-user', res.message || '', !!res.ok);
               loadAdminUsers();
             })
+            .withFailureHandler(rpcFail('msg-admin-user'))
             .deactivateUserAdmin(delId);
         }
       });
@@ -1194,6 +1307,7 @@
                 loadAdminUsers();
               }
             })
+            .withFailureHandler(rpcFail('msg-admin-user'))
             .updateUserAdmin(editId, {
               ad: data.ad,
               rol: data.rol,
@@ -1208,6 +1322,7 @@
                 loadAdminUsers();
               }
             })
+            .withFailureHandler(rpcFail('msg-admin-user'))
             .addUserAdmin({
               id: data.id,
               ad: data.ad,
@@ -1552,6 +1667,7 @@
             });
             renderList('list-admin-filtre', items, activityItemHtml);
           })
+          .withFailureHandler(rpcFail('msg-admin-filtre'))
           .getAdminFilteredReport(data);
       });
     }
@@ -1573,9 +1689,7 @@
               loadGelir();
             }
           })
-          .withFailureHandler(function () {
-            setMsg('msg-gelir', 'Kayıt eklenemedi.', false);
-          })
+          .withFailureHandler(rpcFail('msg-gelir'))
           .addIncome(kayit);
       });
     }
@@ -1601,9 +1715,7 @@
               loadGider();
             }
           })
-          .withFailureHandler(function () {
-            setMsg('msg-gider', 'Kayıt eklenemedi.', false);
-          })
+          .withFailureHandler(rpcFail('msg-gider'))
           .addExpense(kayit);
       });
     }
@@ -1639,9 +1751,7 @@
                 loadTedarikci();
               }
             })
-            .withFailureHandler(function () {
-              setMsg('msg-tedarikci', 'Güncellenemedi.', false);
-            })
+            .withFailureHandler(rpcFail('msg-tedarikci'))
             .updateSupplier(row, {
               ad: kayit.ad,
               telefon: kayit.telefon,
@@ -1656,9 +1766,7 @@
                 loadTedarikci();
               }
             })
-            .withFailureHandler(function () {
-              setMsg('msg-tedarikci', 'Kayıt eklenemedi.', false);
-            })
+            .withFailureHandler(rpcFail('msg-tedarikci'))
             .addSupplier(kayit);
         }
       });
@@ -1696,9 +1804,7 @@
                     refreshOnayBadge();
                   }
                 })
-                .withFailureHandler(function () {
-                  setMsg('msg-fatura', 'Fatura eklenemedi.', false);
-                })
+                .withFailureHandler(rpcFail('msg-fatura'))
                 .addInvoice(kayit);
             },
             function (err) {
@@ -1746,9 +1852,7 @@
                     refreshOnayBadge();
                   }
                 })
-                .withFailureHandler(function () {
-                  setMsg('msg-odeme', 'Ödeme eklenemedi.', false);
-                })
+                .withFailureHandler(rpcFail('msg-odeme'))
                 .addPayment(kayit);
             },
             function (err) {
@@ -1763,14 +1867,7 @@
     if (formLogin) {
       formLogin.addEventListener('submit', function (e) {
         e.preventDefault();
-        if (!hasGas()) {
-          setMsg(
-            'msg-login',
-            'Giriş için sunucu bağlantısı gerekli (localhost veya Web App).',
-            false
-          );
-          return;
-        }
+        if (!requireGas('msg-login')) return;
         var userId = loginUser && loginUser.value;
         var code = loginCode && loginCode.value;
         if (!userId) {
@@ -1794,10 +1891,7 @@
             showApp(res.session);
             switchTab('ozet');
           })
-          .withFailureHandler(function () {
-            if (btnLogin) btnLogin.disabled = false;
-            setMsg('msg-login', 'Giriş sırasında hata oluştu.', false);
-          })
+          .withFailureHandler(rpcFail('msg-login', function () { if (btnLogin) btnLogin.disabled = false; }))
           .login(userId, code);
       });
     }
@@ -1815,9 +1909,7 @@
             setMsg('msg-login', 'Çıkış yapıldı.', true);
             loadLoginUsers();
           })
-          .withFailureHandler(function () {
-            showLogin();
-          })
+          .withFailureHandler(rpcFail(null, function () { showLogin(); }))
           .logout();
       });
     }
@@ -1849,9 +1941,7 @@
             fillLoginUsers(res.users || []);
           }
         })
-        .withFailureHandler(function () {
-          setMsg('msg-login', 'Kullanıcı listesi alınamadı.', false);
-        })
+        .withFailureHandler(rpcFail('msg-login'))
         .listUsersForLogin();
     }
 
@@ -1859,11 +1949,8 @@
       loadLoginUsers();
       if (!hasGas()) {
         showLogin();
-        setMsg(
-          'msg-login',
-          'Önizleme modu: sunucu yoksa giriş çalışmaz. Localhost’ta npm start kullanın.',
-          true
-        );
+        showServerUnreachable();
+        setMsg('msg-login', SERVER_UNREACHABLE, false);
         return;
       }
       google.script.run
@@ -1875,9 +1962,7 @@
             showLogin();
           }
         })
-        .withFailureHandler(function () {
-          showLogin();
-        })
+        .withFailureHandler(rpcFail('msg-login', function () { showLogin(); }))
         .getSession();
     }
 

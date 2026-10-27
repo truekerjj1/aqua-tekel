@@ -79,22 +79,29 @@ function renderIndex() {
     '        if (typeof prop !== "string") return undefined;\n' +
     '        return function () {\n' +
     '          var args = Array.prototype.slice.call(arguments);\n' +
+    '          function emitFail(err) {\n' +
+    '            if (fail) fail(err);\n' +
+    '            else if (typeof window.__aquaRpcFail === "function") window.__aquaRpcFail(err);\n' +
+    '          }\n' +
     '          fetch("/api/run", {\n' +
     '            method: "POST",\n' +
     '            credentials: "same-origin",\n' +
     '            headers: { "Content-Type": "application/json" },\n' +
     '            body: JSON.stringify({ method: prop, args: args })\n' +
     '          })\n' +
-    '            .then(function (r) { return r.json(); })\n' +
+    '            .then(function (r) {\n' +
+    '              if (!r.ok) throw new Error("HTTP " + r.status);\n' +
+    '              return r.json();\n' +
+    '            })\n' +
     '            .then(function (data) {\n' +
     '              if (data && data.__error) {\n' +
-    '                if (fail) fail(data.__error);\n' +
+    '                emitFail(data.__error);\n' +
     '                return;\n' +
     '              }\n' +
     '              if (ok) ok(data.result);\n' +
     '            })\n' +
     '            .catch(function (err) {\n' +
-    '              if (fail) fail(err && err.message ? err.message : String(err));\n' +
+    '              emitFail(err && err.message ? err.message : String(err));\n' +
     '            });\n' +
     '        };\n' +
     '      }\n' +
