@@ -259,10 +259,13 @@
     position: relative;
     flex: 1;
     min-height: 100vh;
+    min-height: 100svh;
     display: grid;
-    grid-template-rows: 1fr auto;
-    align-items: end;
-    padding: clamp(1.5rem, 5vh, 3rem) clamp(1.1rem, 4vw, 2.5rem) clamp(1.4rem, 4vh, 2.2rem);
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-content: stretch;
+    justify-items: stretch;
+    gap: 1.25rem;
+    padding: clamp(1.35rem, 4.5vh, 2.75rem) clamp(1.1rem, 4vw, 2.5rem) clamp(1.25rem, 3.5vh, 2rem);
     overflow: hidden;
   }
 
@@ -296,11 +299,12 @@
   .login-hero {
     position: relative;
     z-index: 1;
-    align-self: center;
+    align-self: end;
     justify-self: start;
     width: 100%;
     max-width: 42rem;
-    padding: 0 0 1.5rem;
+    padding: 0;
+    margin: 0;
     text-align: left;
   }
 
@@ -335,8 +339,9 @@
     width: 100%;
     max-width: 24rem;
     justify-self: start;
+    align-self: end;
     padding: 1.45rem 1.35rem 1.25rem;
-    background: rgba(12, 12, 12, 0.92);
+    background: rgba(12, 12, 12, 0.94);
     border: 1px solid var(--surface-line);
     border-top: 2px solid var(--yellow);
     border-radius: var(--radius);
@@ -1216,6 +1221,7 @@
 
   .anim-rise {
     animation: rise-in 0.55s var(--ease) both;
+    /* Görünür kal: animasyon kesilirse içerik kaybolmasın */
   }
 
   .anim-fade {
@@ -1224,6 +1230,13 @@
 
   .anim-mark {
     animation: mark-settle 0.7s var(--ease) 0.05s both;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .login-card.anim-rise {
+      /* Kart her zaman etkileşim için okunur — gecikmeli opacity riskini sınırla */
+      animation-duration: 0.45s;
+    }
   }
 
   .anim-pulse-soft {
@@ -1259,21 +1272,25 @@
   @media (min-width: 860px) {
     .login-stage,
     .login-wrap {
-      grid-template-columns: 1.15fr 0.85fr;
+      grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 26rem);
       grid-template-rows: 1fr;
       align-items: center;
+      justify-content: space-between;
       padding: 3rem clamp(2rem, 6vw, 5rem);
-      gap: 2.5rem;
+      gap: clamp(1.5rem, 4vw, 3.5rem);
     }
 
     .login-hero {
       align-self: center;
       padding: 0;
+      max-width: none;
     }
 
     .login-card {
       justify-self: end;
+      align-self: center;
       max-width: 26rem;
+      width: 100%;
     }
 
     .login-brand {
@@ -1295,13 +1312,24 @@
 
     .login-stage,
     .login-wrap {
-      padding: 1.35rem 1.1rem 1.25rem;
+      padding: 1.15rem 1.05rem 1.1rem;
       min-height: 100svh;
+      gap: 0.85rem;
     }
 
     .login-hero {
       text-align: left;
-      padding-bottom: 1.1rem;
+      align-self: end;
+    }
+
+    .login-brand {
+      font-size: clamp(2.2rem, 10vw, 2.85rem);
+    }
+
+    .logo-svg--hero {
+      width: 3.35rem;
+      height: 3.35rem;
+      margin-bottom: 0.85rem;
     }
 
     .site-header {
