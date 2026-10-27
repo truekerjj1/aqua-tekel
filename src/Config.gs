@@ -29,7 +29,8 @@ var CONFIG = {
     FATURALAR: 'Faturalar',
     ODEMELER: 'Odemeler',
     KULLANICILAR: 'Kullanicilar',
-    ONAYLAR: 'Onaylar'
+    ONAYLAR: 'Onaylar',
+    GIRIS_LOG: 'GirisLog'
   },
 
   // Başlık satırları — Bootstrap.gs TEST_SAYFALARI ile aynı olmalı
@@ -48,7 +49,8 @@ var CONFIG = {
     ],
     // Kod sütunu test only — düz metin sandbox; üretime taşınmaz.
     KULLANICILAR: ['Id', 'E-posta', 'Rol', 'Ad', 'Aktif', 'Kod'],
-    ONAYLAR: ['Id', 'Tip', 'RefId', 'Kullanici', 'Tarih', 'Durum', 'Ozet']
+    ONAYLAR: ['Id', 'Tip', 'RefId', 'Kullanici', 'Tarih', 'Durum', 'Ozet'],
+    GIRIS_LOG: ['Tarih', 'Saat', 'UserId', 'Ad', 'Rol']
   },
 
   /**

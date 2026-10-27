@@ -4,12 +4,11 @@ const fs = require('fs');
 const path = require('path');
 const cfg = require('./config');
 const store = require('./store');
+const money = require('./money');
 
-function parseTutar(deger) {
-  if (typeof deger === 'number') return deger;
-  if (deger === null || deger === undefined || deger === '') return NaN;
-  return Number(String(deger).replace(/\s/g, '').replace(',', '.'));
-}
+var parseTutar = money.parseTutar;
+var formatTutarTr = money.formatTutarTr;
+var sanitizeDekontUrl = money.sanitizeDekontUrl;
 
 function normalizeKeyPart(deger) {
   if (deger === null || deger === undefined) return '';
@@ -481,38 +480,85 @@ function getAppInfo(ctx) {
   };
 }
 
+function txDedupKey(kayit) {
+  kayit = kayit || {};
+  return [
+    normalizeKeyPart(kayit.tarih),
+    normalizeKeyPart(parseTutar(kayit.tutar)),
+    normalizeKeyPart(kayit.aciklama)
+  ].join('|');
+}
+
+function invoiceDedupKey(kayit) {
+  kayit = kayit || {};
+  return normalizeKeyPart(kayit.faturaNo) + '|' + normalizeKeyPart(kayit.tedarikci);
+}
+
+function paymentDedupKey(kayit) {
+  kayit = kayit || {};
+  return [
+    normalizeKeyPart(kayit.tarih),
+    normalizeKeyPart(kayit.tedarikci),
+    normalizeKeyPart(parseTutar(kayit.tutar)),
+    normalizeKeyPart(normalizeOdemeYontemi(kayit.yontem)),
+    normalizeKeyPart(kayit.faturaNo)
+  ].join('|');
+}
+
+function findLocalDuplicate(list, keyFn, kayit) {
+  var target = keyFn(kayit);
+  if (!target || target === '||' || target === '||||') return false;
+  for (var i = 0; i < list.length; i++) {
+    if (keyFn(list[i]) === target) return true;
+  }
+  return false;
+}
+
 function getPanelSummary() {
   var gelirToplam = 0;
   var giderToplam = 0;
   var tedarikciBorcToplam = 0;
   var tedarikciler = [];
 
-  store.readJson('income', []).forEach(function (r) {
-    var gt = parseTutar(r.tutar);
-    if (!isNaN(gt)) gelirToplam += gt;
-  });
-  store.readJson('expense', []).forEach(function (r) {
-    var xt = parseTutar(r.tutar);
-    if (!isNaN(xt)) giderToplam += xt;
-  });
+  try {
+    store.readJson('income', []).forEach(function (r) {
+      var gt = parseTutar(r.tutar);
+      if (!isNaN(gt)) gelirToplam += gt;
+    });
+    store.readJson('expense', []).forEach(function (r) {
+      var xt = parseTutar(r.tutar);
+      if (!isNaN(xt)) giderToplam += xt;
+    });
 
-  refreshSupplierBalances();
-  store.readJson('suppliers', []).forEach(function (s) {
-    if (s.aktif === false) return;
-    var borc = parseTutar(s.kalanBorc);
-    if (isNaN(borc)) borc = computeSupplierBalance(s.ad);
-    tedarikciBorcToplam += borc;
-    tedarikciler.push({ ad: s.ad, kalanBorc: borc });
-  });
+    refreshSupplierBalances();
+    store.readJson('suppliers', []).forEach(function (s) {
+      if (s.aktif === false) return;
+      var borc = parseTutar(s.kalanBorc);
+      if (isNaN(borc)) borc = computeSupplierBalance(s.ad);
+      tedarikciBorcToplam += borc;
+      tedarikciler.push({ ad: s.ad, kalanBorc: borc });
+    });
 
-  return {
-    ok: true,
-    message: 'Tamam',
-    gelirToplam: gelirToplam,
-    giderToplam: giderToplam,
-    tedarikciBorcToplam: tedarikciBorcToplam,
-    tedarikciler: tedarikciler
-  };
+    return {
+      ok: true,
+      partial: false,
+      message: 'Tamam',
+      gelirToplam: gelirToplam,
+      giderToplam: giderToplam,
+      tedarikciBorcToplam: tedarikciBorcToplam,
+      tedarikciler: tedarikciler
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      partial: false,
+      message: 'Özet alınamadı: ' + (e && e.message ? e.message : String(e)),
+      gelirToplam: gelirToplam,
+      giderToplam: giderToplam,
+      tedarikciBorcToplam: tedarikciBorcToplam,
+      tedarikciler: tedarikciler
+    };
+  }
 }
 
 function collectActivity(userFilter, limit) {
@@ -698,6 +744,18 @@ var handlers = {
       return { ok: false, message: 'Gelir için tarih, tutar ve açıklama gerekli.' };
     }
     var list = store.readJson('income', []);
+    if (findLocalDuplicate(list, txDedupKey, {
+      tarih: kayit.tarih,
+      tutar: tutar,
+      aciklama: kayit.aciklama
+    })) {
+      return {
+        ok: false,
+        duplicate: true,
+        message:
+          'Aynı tarih + tutar + açıklama zaten var. Farklı bir işlemse açıklamayı ayırt edin.'
+      };
+    }
     list.push({
       tarih: kayit.tarih,
       tutar: tutar,
@@ -735,6 +793,18 @@ var handlers = {
       return { ok: false, message: 'Gider için kategori seçin.' };
     }
     var list = store.readJson('expense', []);
+    if (findLocalDuplicate(list, txDedupKey, {
+      tarih: kayit.tarih,
+      tutar: tutar,
+      aciklama: kayit.aciklama
+    })) {
+      return {
+        ok: false,
+        duplicate: true,
+        message:
+          'Aynı tarih + tutar + açıklama zaten var. Farklı bir işlemse açıklamayı ayırt edin.'
+      };
+    }
     list.push({
       tarih: kayit.tarih,
       tutar: tutar,
@@ -783,8 +853,23 @@ var handlers = {
         message: 'Ödeme yöntemi: Nakit, Kredi kartı veya Vadeli seçin.'
       };
     }
-    var onayDurum = initialApprovalStatus(ctx);
     var list = store.readJson('payments', []);
+    if (findLocalDuplicate(list, paymentDedupKey, {
+      tarih: kayit.tarih,
+      tedarikci: tedarikci,
+      tutar: tutar,
+      yontem: yontem,
+      faturaNo: kayit.faturaNo || ''
+    })) {
+      return {
+        ok: false,
+        duplicate: true,
+        message:
+          'Aynı tarih + tedarikçi + tutar + yöntem + fatura no zaten var. ' +
+          'Gerçekten ayrı bir ödeme ise not/tarihi ayırt edin.'
+      };
+    }
+    var onayDurum = initialApprovalStatus(ctx);
     list.push({
       tarih: kayit.tarih,
       tedarikci: tedarikci,
@@ -795,7 +880,7 @@ var handlers = {
       kullanici: currentActorLabel(ctx),
       onayDurum: onayDurum,
       dekontFileId: kayit.dekontFileId || '',
-      dekontUrl: kayit.dekontUrl || ''
+      dekontUrl: sanitizeDekontUrl(kayit.dekontUrl)
     });
     store.writeJson('payments', list);
     var rowNum = list.length + 1; // sheet-style: header + index → row = length+1
@@ -846,8 +931,19 @@ var handlers = {
         message: 'Fatura için fatura no, tarih, tedarikçi ve tutar gerekli.'
       };
     }
-    var onayDurum = initialApprovalStatus(ctx);
     var list = store.readJson('invoices', []);
+    if (findLocalDuplicate(list, invoiceDedupKey, {
+      faturaNo: faturaNo,
+      tedarikci: tedarikci
+    })) {
+      return {
+        ok: false,
+        duplicate: true,
+        message:
+          'Aynı fatura no + tedarikçi zaten var. Farklı bir fatura ise numarayı kontrol edin.'
+      };
+    }
+    var onayDurum = initialApprovalStatus(ctx);
     list.push({
       faturaNo: faturaNo,
       tarih: kayit.tarih,
@@ -860,7 +956,7 @@ var handlers = {
       kullanici: currentActorLabel(ctx),
       onayDurum: onayDurum,
       dekontFileId: kayit.dekontFileId || '',
-      dekontUrl: kayit.dekontUrl || ''
+      dekontUrl: sanitizeDekontUrl(kayit.dekontUrl)
     });
     store.writeJson('invoices', list);
     var rowNum = list.length + 1;
@@ -946,6 +1042,20 @@ var handlers = {
       if (normalizeKeyPart(list[i].ad) === normalizeKeyPart(ad)) {
         return { ok: false, message: 'Bu tedarikçi adı zaten var: ' + ad };
       }
+    }
+    var oldAd = String(list[idx].ad || '').trim();
+    if (normalizeKeyPart(oldAd) !== normalizeKeyPart(ad)) {
+      var oldKey = normalizeKeyPart(oldAd);
+      var invoices = store.readJson('invoices', []);
+      invoices.forEach(function (inv) {
+        if (normalizeKeyPart(inv.tedarikci) === oldKey) inv.tedarikci = ad;
+      });
+      store.writeJson('invoices', invoices);
+      var payments = store.readJson('payments', []);
+      payments.forEach(function (pay) {
+        if (normalizeKeyPart(pay.tedarikci) === oldKey) pay.tedarikci = ad;
+      });
+      store.writeJson('payments', payments);
     }
     list[idx].ad = ad;
     if (tedarikci.telefon !== undefined) list[idx].telefon = tedarikci.telefon;

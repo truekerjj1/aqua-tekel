@@ -14,80 +14,93 @@
  * @return {{ok: boolean, message: string, row?: number, onayDurum?: string}}
  */
 function addPayment(kayit) {
-  // Ödeme: patron veya personel — tedarikçiyi listeden seçer, kayıt oluşturmaz.
-  var denied = denyUnlessWriter();
-  if (denied) {
-    return denied;
-  }
+  return withScriptLock_(function () {
+    // Ödeme: patron veya personel — tedarikçiyi listeden seçer, kayıt oluşturmaz.
+    var denied = denyUnlessWriter();
+    if (denied) {
+      return denied;
+    }
 
-  kayit = kayit || {};
-  var tedarikci = String(kayit.tedarikci || '').trim();
-  var tutar = parseTutar(kayit.tutar);
-  var yontem = normalizeOdemeYontemi(kayit.yontem);
+    kayit = kayit || {};
+    var tedarikci = String(kayit.tedarikci || '').trim();
+    var tutar = parseTutar(kayit.tutar);
+    var yontem = normalizeOdemeYontemi(kayit.yontem);
 
-  if (!kayit.tarih || !tedarikci || isNaN(tutar)) {
+    if (!kayit.tarih || !tedarikci || isNaN(tutar)) {
+      return {
+        ok: false,
+        message: 'Ödeme için tarih, tedarikçi ve tutar gerekli.'
+      };
+    }
+
+    var methods = getConfig().ODEME_YONTEMLERI || [];
+    if (methods.length && methods.indexOf(yontem) < 0) {
+      return {
+        ok: false,
+        message: 'Ödeme yöntemi: Nakit, Kredi kartı veya Vadeli seçin.'
+      };
+    }
+
+    var dedup = checkDedup({
+      tarih: kayit.tarih,
+      tedarikci: tedarikci,
+      tutar: tutar,
+      yontem: yontem,
+      faturaNo: kayit.faturaNo || ''
+    }, 'odeme');
+    if (!dedup.ok) {
+      return dedup;
+    }
+
+    var cfg = getConfig();
+    var got = getSandboxSheet(cfg.SHEETS.ODEMELER);
+    if (!got.ok) {
+      return { ok: false, message: got.message };
+    }
+
+    var onayDurum = initialApprovalStatus_();
+    var kullanici = currentActorLabel_();
+    var dekontFileId = kayit.dekontFileId || '';
+    var dekontUrl = sanitizeDekontUrl(kayit.dekontUrl);
+
+    got.sheet.appendRow([
+      kayit.tarih,
+      tedarikci,
+      tutar,
+      yontem,
+      kayit.faturaNo || '',
+      kayit.not || '',
+      kullanici,
+      onayDurum,
+      dekontFileId,
+      dekontUrl
+    ]);
+
+    var rowNum = got.sheet.getLastRow();
+
+    // Vadeli: borç düşmez (computeSupplierBalance zaten Vadeli’yi saymaz)
+    refreshSupplierBalances(tedarikci);
+
+    var ozet =
+      yontem + ' · ' + tedarikci + ' · ' + tutar +
+      (yontem === 'Vadeli' ? ' (vadeli — borç düşmez)' : '');
+    createApproval('odeme', rowNum, ozet, onayDurum);
+
+    var msg = 'Ödeme kaydı eklendi.';
+    if (yontem === 'Vadeli') {
+      msg += ' Vadeli: cari işlem kaydı; kalan borçtan düşülmez.';
+    }
+    if (onayDurum === cfg.ONAY_DURUM.BEKLIYOR) {
+      msg += ' Onay bekliyor.';
+    }
+
     return {
-      ok: false,
-      message: 'Ödeme için tarih, tedarikçi ve tutar gerekli.'
+      ok: true,
+      message: msg,
+      row: rowNum,
+      onayDurum: onayDurum
     };
-  }
-
-  var methods = getConfig().ODEME_YONTEMLERI || [];
-  if (methods.length && methods.indexOf(yontem) < 0) {
-    return {
-      ok: false,
-      message: 'Ödeme yöntemi: Nakit, Kredi kartı veya Vadeli seçin.'
-    };
-  }
-
-  var cfg = getConfig();
-  var got = getSandboxSheet(cfg.SHEETS.ODEMELER);
-  if (!got.ok) {
-    return { ok: false, message: got.message };
-  }
-
-  var onayDurum = initialApprovalStatus_();
-  var kullanici = currentActorLabel_();
-  var dekontFileId = kayit.dekontFileId || '';
-  var dekontUrl = kayit.dekontUrl || '';
-
-  got.sheet.appendRow([
-    kayit.tarih,
-    tedarikci,
-    tutar,
-    yontem,
-    kayit.faturaNo || '',
-    kayit.not || '',
-    kullanici,
-    onayDurum,
-    dekontFileId,
-    dekontUrl
-  ]);
-
-  var rowNum = got.sheet.getLastRow();
-
-  // Vadeli: borç düşmez (computeSupplierBalance zaten Vadeli’yi saymaz)
-  refreshSupplierBalances(tedarikci);
-
-  var ozet =
-    yontem + ' · ' + tedarikci + ' · ' + tutar +
-    (yontem === 'Vadeli' ? ' (vadeli — borç düşmez)' : '');
-  createApproval('odeme', rowNum, ozet, onayDurum);
-
-  var msg = 'Ödeme kaydı eklendi.';
-  if (yontem === 'Vadeli') {
-    msg += ' Vadeli: cari işlem kaydı; kalan borçtan düşülmez.';
-  }
-  if (onayDurum === cfg.ONAY_DURUM.BEKLIYOR) {
-    msg += ' Onay bekliyor.';
-  }
-
-  return {
-    ok: true,
-    message: msg,
-    row: rowNum,
-    onayDurum: onayDurum
-  };
+  });
 }
 
 /**
@@ -172,12 +185,18 @@ function updatePayment(id, kayit) {
     : existing[3];
   var faturaNo = kayit.faturaNo !== undefined ? kayit.faturaNo : existing[4];
   var not = kayit.not !== undefined ? kayit.not : existing[5];
-  var kullanici = kayit.kullanici !== undefined ? kayit.kullanici : existing[6];
-  var onayDurum = kayit.onayDurum !== undefined ? kayit.onayDurum : existing[7];
+  // Kullanıcı / onay durumu istemciden yükseltilmesin (onay → decideApproval)
+  var kullanici = existing[6];
+  var onayDurum = existing[7];
+  if (kayit.onayDurum !== undefined && requirePatron()) {
+    onayDurum = kayit.onayDurum;
+  }
   var dekontFileId = kayit.dekontFileId !== undefined
     ? kayit.dekontFileId
     : existing[8];
-  var dekontUrl = kayit.dekontUrl !== undefined ? kayit.dekontUrl : existing[9];
+  var dekontUrl = kayit.dekontUrl !== undefined
+    ? sanitizeDekontUrl(kayit.dekontUrl)
+    : existing[9];
 
   if (!tedarikci) {
     return { ok: false, message: 'Tedarikçi boş olamaz.' };

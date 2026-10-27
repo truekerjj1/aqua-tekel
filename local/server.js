@@ -189,6 +189,27 @@ function mimeFor(filePath) {
   return 'application/octet-stream';
 }
 
+function resolveSessionFromStore(parsed) {
+  if (!parsed || !parsed.id) return null;
+  if (parsed.exp && parsed.exp <= Date.now()) return null;
+  var users = store.readJson('users', []);
+  var id = String(parsed.id).trim();
+  for (var i = 0; i < users.length; i++) {
+    var u = users[i];
+    if (u && u.id === id && u.aktif !== false) {
+      // Rol / ad çerezden değil — store’dan (sahte patron çerezi engeli)
+      return { id: u.id, ad: u.ad || u.id, rol: u.rol || 'personel' };
+    }
+  }
+  for (var j = 0; j < (cfg.TEST_USERS || []).length; j++) {
+    var t = cfg.TEST_USERS[j];
+    if (t && t.id === id) {
+      return { id: t.id, ad: t.ad, rol: t.rol };
+    }
+  }
+  return null;
+}
+
 function makeCtx(req, res) {
   var cookies = parseCookies(req);
   var session = null;
@@ -196,11 +217,7 @@ function makeCtx(req, res) {
   if (raw) {
     try {
       var parsed = JSON.parse(raw);
-      if (parsed && parsed.id && parsed.rol) {
-        if (!parsed.exp || parsed.exp > Date.now()) {
-          session = { id: parsed.id, ad: parsed.ad, rol: parsed.rol };
-        }
-      }
+      session = resolveSessionFromStore(parsed);
     } catch (e) {
       session = null;
     }

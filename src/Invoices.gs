@@ -12,74 +12,76 @@
  * @return {{ok: boolean, message: string, duplicate?: boolean, row?: number}}
  */
 function addInvoice(kayit) {
-  // Fatura ekleme: patron veya personel (tedarikçi ekleme hâlâ yalnız patron).
-  var denied = denyUnlessInvoiceManager();
-  if (denied) {
-    return denied;
-  }
+  return withScriptLock_(function () {
+    // Fatura ekleme: patron veya personel (tedarikçi ekleme hâlâ yalnız patron).
+    var denied = denyUnlessInvoiceManager();
+    if (denied) {
+      return denied;
+    }
 
-  kayit = kayit || {};
-  var faturaNo = String(kayit.faturaNo || '').trim();
-  var tedarikci = String(kayit.tedarikci || '').trim();
-  var tutar = parseTutar(kayit.tutar);
-  var yontem = normalizeOdemeYontemi(kayit.yontem || '');
+    kayit = kayit || {};
+    var faturaNo = String(kayit.faturaNo || '').trim();
+    var tedarikci = String(kayit.tedarikci || '').trim();
+    var tutar = parseTutar(kayit.tutar);
+    var yontem = normalizeOdemeYontemi(kayit.yontem || '');
 
-  if (!faturaNo || !kayit.tarih || !tedarikci || isNaN(tutar)) {
-    return {
-      ok: false,
-      message: 'Fatura için fatura no, tarih, tedarikçi ve tutar gerekli.'
-    };
-  }
+    if (!faturaNo || !kayit.tarih || !tedarikci || isNaN(tutar)) {
+      return {
+        ok: false,
+        message: 'Fatura için fatura no, tarih, tedarikçi ve tutar gerekli.'
+      };
+    }
 
-  var dedup = checkDedup({
-    faturaNo: faturaNo,
-    tedarikci: tedarikci
-  }, 'fatura');
-  if (!dedup.ok) {
-    return dedup;
-  }
+    var dedup = checkDedup({
+      faturaNo: faturaNo,
+      tedarikci: tedarikci
+    }, 'fatura');
+    if (!dedup.ok) {
+      return dedup;
+    }
 
-  var cfg = getConfig();
-  var got = getSandboxSheet(cfg.SHEETS.FATURALAR);
-  if (!got.ok) {
-    return { ok: false, message: got.message };
-  }
+    var cfg = getConfig();
+    var got = getSandboxSheet(cfg.SHEETS.FATURALAR);
+    if (!got.ok) {
+      return { ok: false, message: got.message };
+    }
 
-  var onayDurum = initialApprovalStatus_();
-  var kullanici = currentActorLabel_();
+    var onayDurum = initialApprovalStatus_();
+    var kullanici = currentActorLabel_();
 
-  got.sheet.appendRow([
-    faturaNo,
-    kayit.tarih,
-    tedarikci,
-    tutar,
-    kayit.vade || '',
-    kayit.durum || 'Açık',
-    kayit.not || '',
-    yontem,
-    kullanici,
-    onayDurum,
-    kayit.dekontFileId || '',
-    kayit.dekontUrl || ''
-  ]);
+    got.sheet.appendRow([
+      faturaNo,
+      kayit.tarih,
+      tedarikci,
+      tutar,
+      kayit.vade || '',
+      kayit.durum || 'Açık',
+      kayit.not || '',
+      yontem,
+      kullanici,
+      onayDurum,
+      kayit.dekontFileId || '',
+      sanitizeDekontUrl(kayit.dekontUrl)
+    ]);
 
-  var rowNum = got.sheet.getLastRow();
-  refreshSupplierBalances(tedarikci);
+    var rowNum = got.sheet.getLastRow();
+    refreshSupplierBalances(tedarikci);
 
-  createApproval(
-    'fatura',
-    rowNum,
-    faturaNo + ' · ' + tedarikci + ' · ' + tutar +
-      (yontem ? ' · ' + yontem : ''),
-    onayDurum
-  );
+    createApproval(
+      'fatura',
+      rowNum,
+      faturaNo + ' · ' + tedarikci + ' · ' + tutar +
+        (yontem ? ' · ' + yontem : ''),
+      onayDurum
+    );
 
-  var msg = 'Fatura kaydı eklendi.';
-  if (onayDurum === cfg.ONAY_DURUM.BEKLIYOR) {
-    msg += ' Onay bekliyor.';
-  }
+    var msg = 'Fatura kaydı eklendi.';
+    if (onayDurum === cfg.ONAY_DURUM.BEKLIYOR) {
+      msg += ' Onay bekliyor.';
+    }
 
-  return { ok: true, message: msg, row: rowNum, onayDurum: onayDurum };
+    return { ok: true, message: msg, row: rowNum, onayDurum: onayDurum };
+  });
 }
 
 /**
@@ -171,12 +173,17 @@ function updateInvoice(id, kayit) {
   var yontem = kayit.yontem !== undefined
     ? normalizeOdemeYontemi(kayit.yontem)
     : existing[7];
-  var kullanici = kayit.kullanici !== undefined ? kayit.kullanici : existing[8];
-  var onayDurum = kayit.onayDurum !== undefined ? kayit.onayDurum : existing[9];
+  var kullanici = existing[8];
+  var onayDurum = existing[9];
+  if (kayit.onayDurum !== undefined && requirePatron()) {
+    onayDurum = kayit.onayDurum;
+  }
   var dekontFileId = kayit.dekontFileId !== undefined
     ? kayit.dekontFileId
     : existing[10];
-  var dekontUrl = kayit.dekontUrl !== undefined ? kayit.dekontUrl : existing[11];
+  var dekontUrl = kayit.dekontUrl !== undefined
+    ? sanitizeDekontUrl(kayit.dekontUrl)
+    : existing[11];
 
   if (!faturaNo || !tedarikci) {
     return { ok: false, message: 'Fatura no ve tedarikçi boş olamaz.' };

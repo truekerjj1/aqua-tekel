@@ -281,12 +281,16 @@ function getSession() {
  */
 function getUserRole(email) {
   var sess = getSessionUser_();
-  if (sess && sess.rol) {
-    if (sess.rol === ROLLER.PATRON ||
-        sess.rol === ROLLER.PERSONEL ||
-        sess.rol === ROLLER.MISAFIR) {
-      return sess.rol;
+  if (sess && sess.id) {
+    // Rol cache’ten değil — kullanıcı kaydından (silinmiş / pasif → misafir)
+    var user = findTestUserById_(sess.id);
+    if (user && user.aktif !== false && user.aktif !== 'Hayır') {
+      if (user.rol === ROLLER.PATRON || user.rol === ROLLER.PERSONEL) {
+        return user.rol;
+      }
     }
+    // Bozuk / pasif oturum ayrıcalık açmasın (e-posta yedeğine düşme)
+    return ROLLER.MISAFIR;
   }
   email = email || getCurrentUserEmail();
   if (!email) {

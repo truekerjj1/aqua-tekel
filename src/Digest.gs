@@ -10,6 +10,7 @@
  */
 
 var DIGEST_PROP_KEY = 'AQUA_TEKEL_LAST_WEEKLY_DIGEST';
+/** Config.SHEETS.GIRIS_LOG ile aynı — 'GirisLog' */
 var LOGIN_SHEET_NAME = 'GirisLog';
 
 /**

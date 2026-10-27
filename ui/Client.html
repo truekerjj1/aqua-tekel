@@ -75,6 +75,39 @@
         .replace(/"/g, '&quot;');
     }
 
+    /** Yalnız http(s) veya /uploads/ — javascript: vb. href engeli */
+    function safeHref(url) {
+      var u = String(url == null ? '' : url).trim();
+      if (!u) return '';
+      if (/^https?:\/\//i.test(u)) return u;
+      if (u.indexOf('/uploads/') === 0) return u;
+      return '';
+    }
+
+    /**
+     * Çift gönderim koruması: submit sırasında butonu kilitler.
+     * @param {HTMLFormElement} form
+     * @param {function(function(): void): void} run — run(done) çağırır; done kilidi açar
+     */
+    function withFormBusy(form, run) {
+      if (!form) return;
+      if (form.getAttribute('data-busy') === '1') return;
+      form.setAttribute('data-busy', '1');
+      var btn = form.querySelector('button[type="submit"]');
+      var prevDisabled = btn ? btn.disabled : false;
+      if (btn) btn.disabled = true;
+      function done() {
+        form.removeAttribute('data-busy');
+        if (btn) btn.disabled = prevDisabled;
+      }
+      try {
+        run(done);
+      } catch (err) {
+        done();
+        throw err;
+      }
+    }
+
     function onayBadge(durum) {
       if (!durum) return '';
       var d = String(durum);
@@ -469,6 +502,10 @@
         }
       );
       gosterBorcOzeti(bilgi.summary);
+      if (bilgi.summary && bilgi.summary.ok === false && bilgi.summary.message) {
+        statusEl.textContent =
+          (bilgi.message || 'Merhaba') + ' — ' + bilgi.summary.message;
+      }
     }
 
     function hata(mesaj) {
@@ -726,8 +763,9 @@
           }
           setMsg('msg-odeme', '', true);
           renderList('list-odeme', res.rows, function (r) {
-            var dekont = r.dekontUrl
-              ? ' · <a href="' + escapeText(r.dekontUrl) + '" target="_blank" rel="noopener">Dekont</a>'
+            var href = safeHref(r.dekontUrl);
+            var dekont = href
+              ? ' · <a href="' + escapeText(href) + '" target="_blank" rel="noopener">Dekont</a>'
               : '';
             return (
               '<strong>' + formatTutar(r.tutar) + '</strong> · ' +
@@ -759,8 +797,9 @@
           }
           setMsg('msg-fatura', '', true);
           renderList('list-fatura', res.rows, function (r) {
-            var dekont = r.dekontUrl
-              ? ' · <a href="' + escapeText(r.dekontUrl) + '" target="_blank" rel="noopener">Dekont</a>'
+            var href = safeHref(r.dekontUrl);
+            var dekont = href
+              ? ' · <a href="' + escapeText(href) + '" target="_blank" rel="noopener">Dekont</a>'
               : '';
             return (
               '<strong>' +
@@ -1680,17 +1719,20 @@
           setMsg('msg-gelir', 'Kayıt için sunucu bağlantısı gerekli.', false);
           return;
         }
-        var kayit = formValues(formGelir);
-        google.script.run
-          .withSuccessHandler(function (res) {
-            setMsg('msg-gelir', res.message || '', !!res.ok);
-            if (res.ok) {
-              formGelir.reset();
-              loadGelir();
-            }
-          })
-          .withFailureHandler(rpcFail('msg-gelir'))
-          .addIncome(kayit);
+        withFormBusy(formGelir, function (done) {
+          var kayit = formValues(formGelir);
+          google.script.run
+            .withSuccessHandler(function (res) {
+              done();
+              setMsg('msg-gelir', res.message || '', !!res.ok);
+              if (res.ok) {
+                formGelir.reset();
+                loadGelir();
+              }
+            })
+            .withFailureHandler(rpcFail('msg-gelir', done))
+            .addIncome(kayit);
+        });
       });
     }
 
@@ -1707,16 +1749,19 @@
           setMsg('msg-gider', 'Kategori seçin.', false);
           return;
         }
-        google.script.run
-          .withSuccessHandler(function (res) {
-            setMsg('msg-gider', res.message || '', !!res.ok);
-            if (res.ok) {
-              formGider.reset();
-              loadGider();
-            }
-          })
-          .withFailureHandler(rpcFail('msg-gider'))
-          .addExpense(kayit);
+        withFormBusy(formGider, function (done) {
+          google.script.run
+            .withSuccessHandler(function (res) {
+              done();
+              setMsg('msg-gider', res.message || '', !!res.ok);
+              if (res.ok) {
+                formGider.reset();
+                loadGider();
+              }
+            })
+            .withFailureHandler(rpcFail('msg-gider', done))
+            .addExpense(kayit);
+        });
       });
     }
 
@@ -1740,35 +1785,39 @@
           );
           return;
         }
-        var kayit = formValues(formTed);
-        var row = kayit.row;
-        if (row) {
-          google.script.run
-            .withSuccessHandler(function (res) {
-              setMsg('msg-tedarikci', res.message || '', !!res.ok);
-              if (res.ok) {
-                resetTedarikciForm();
-                loadTedarikci();
-              }
-            })
-            .withFailureHandler(rpcFail('msg-tedarikci'))
-            .updateSupplier(row, {
-              ad: kayit.ad,
-              telefon: kayit.telefon,
-              not: kayit.not
-            });
-        } else {
-          google.script.run
-            .withSuccessHandler(function (res) {
-              setMsg('msg-tedarikci', res.message || '', !!res.ok);
-              if (res.ok) {
-                resetTedarikciForm();
-                loadTedarikci();
-              }
-            })
-            .withFailureHandler(rpcFail('msg-tedarikci'))
-            .addSupplier(kayit);
-        }
+        withFormBusy(formTed, function (done) {
+          var kayit = formValues(formTed);
+          var row = kayit.row;
+          if (row) {
+            google.script.run
+              .withSuccessHandler(function (res) {
+                done();
+                setMsg('msg-tedarikci', res.message || '', !!res.ok);
+                if (res.ok) {
+                  resetTedarikciForm();
+                  loadTedarikci();
+                }
+              })
+              .withFailureHandler(rpcFail('msg-tedarikci', done))
+              .updateSupplier(row, {
+                ad: kayit.ad,
+                telefon: kayit.telefon,
+                not: kayit.not
+              });
+          } else {
+            google.script.run
+              .withSuccessHandler(function (res) {
+                done();
+                setMsg('msg-tedarikci', res.message || '', !!res.ok);
+                if (res.ok) {
+                  resetTedarikciForm();
+                  loadTedarikci();
+                }
+              })
+              .withFailureHandler(rpcFail('msg-tedarikci', done))
+              .addSupplier(kayit);
+          }
+        });
       });
     }
 
@@ -1784,33 +1833,38 @@
           setMsg('msg-fatura', 'Listeden tedarikçi seçin.', false);
           return;
         }
-        var fileEl = document.getElementById('file-fatura-dekont');
-        readFileAsDekont(fileEl, function (filePayload) {
-          if (filePayload && filePayload.error) {
-            setMsg('msg-fatura', filePayload.error, false);
-            return;
-          }
-          uploadThen(
-            filePayload,
-            function (dekont) {
-              kayit.dekontFileId = dekont.fileId;
-              kayit.dekontUrl = dekont.url;
-              google.script.run
-                .withSuccessHandler(function (res) {
-                  setMsg('msg-fatura', res.message || '', !!res.ok);
-                  if (res.ok) {
-                    formFatura.reset();
-                    loadFatura();
-                    refreshOnayBadge();
-                  }
-                })
-                .withFailureHandler(rpcFail('msg-fatura'))
-                .addInvoice(kayit);
-            },
-            function (err) {
-              setMsg('msg-fatura', err, false);
+        withFormBusy(formFatura, function (done) {
+          var fileEl = document.getElementById('file-fatura-dekont');
+          readFileAsDekont(fileEl, function (filePayload) {
+            if (filePayload && filePayload.error) {
+              done();
+              setMsg('msg-fatura', filePayload.error, false);
+              return;
             }
-          );
+            uploadThen(
+              filePayload,
+              function (dekont) {
+                kayit.dekontFileId = dekont.fileId;
+                kayit.dekontUrl = dekont.url;
+                google.script.run
+                  .withSuccessHandler(function (res) {
+                    done();
+                    setMsg('msg-fatura', res.message || '', !!res.ok);
+                    if (res.ok) {
+                      formFatura.reset();
+                      loadFatura();
+                      refreshOnayBadge();
+                    }
+                  })
+                  .withFailureHandler(rpcFail('msg-fatura', done))
+                  .addInvoice(kayit);
+              },
+              function (err) {
+                done();
+                setMsg('msg-fatura', err, false);
+              }
+            );
+          });
         });
       });
     }
@@ -1832,33 +1886,38 @@
           setMsg('msg-odeme', 'Ödeme yöntemi seçin.', false);
           return;
         }
-        var fileEl = document.getElementById('file-odeme-dekont');
-        readFileAsDekont(fileEl, function (filePayload) {
-          if (filePayload && filePayload.error) {
-            setMsg('msg-odeme', filePayload.error, false);
-            return;
-          }
-          uploadThen(
-            filePayload,
-            function (dekont) {
-              kayit.dekontFileId = dekont.fileId;
-              kayit.dekontUrl = dekont.url;
-              google.script.run
-                .withSuccessHandler(function (res) {
-                  setMsg('msg-odeme', res.message || '', !!res.ok);
-                  if (res.ok) {
-                    formOdeme.reset();
-                    loadOdeme();
-                    refreshOnayBadge();
-                  }
-                })
-                .withFailureHandler(rpcFail('msg-odeme'))
-                .addPayment(kayit);
-            },
-            function (err) {
-              setMsg('msg-odeme', err, false);
+        withFormBusy(formOdeme, function (done) {
+          var fileEl = document.getElementById('file-odeme-dekont');
+          readFileAsDekont(fileEl, function (filePayload) {
+            if (filePayload && filePayload.error) {
+              done();
+              setMsg('msg-odeme', filePayload.error, false);
+              return;
             }
-          );
+            uploadThen(
+              filePayload,
+              function (dekont) {
+                kayit.dekontFileId = dekont.fileId;
+                kayit.dekontUrl = dekont.url;
+                google.script.run
+                  .withSuccessHandler(function (res) {
+                    done();
+                    setMsg('msg-odeme', res.message || '', !!res.ok);
+                    if (res.ok) {
+                      formOdeme.reset();
+                      loadOdeme();
+                      refreshOnayBadge();
+                    }
+                  })
+                  .withFailureHandler(rpcFail('msg-odeme', done))
+                  .addPayment(kayit);
+              },
+              function (err) {
+                done();
+                setMsg('msg-odeme', err, false);
+              }
+            );
+          });
         });
       });
     }
