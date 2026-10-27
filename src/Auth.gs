@@ -1,7 +1,7 @@
 /**
  * Aqua Tekel — yetki + panel oturumu (sandbox)
  *
- * Config.TEST_USERS ile giriş (kullanıcı seç + kişisel erişim kodu).
+ * Config.TEST_USERS ile giriş (kullanıcı seç + şifre).
  * Config.PATRON_EMAILS / PERSONEL_EMAILS yedek (Google e-posta).
  *
  * Yetki matrisi (sunucu tarafı da zorunlu — yalnız UI gizleme yetmez):
@@ -19,7 +19,7 @@
  * | Çıkış                | evet   | evet     |
  *
  * requirePatron / requirePersonelOrPatron / deny* yardımcıları API’lerde kullanılır.
- * Erişim kodları test only — canlı şifre değildir.
+ * Şifreler test only — canlı hesap şifresi değildir.
  */
 
 var ROLLER = {
@@ -154,10 +154,10 @@ function listUsersForLogin() {
 }
 
 /**
- * Kullanıcı + kişisel erişim kodu ile giriş (sandbox).
+ * Kullanıcı + şifre ile giriş (sandbox).
  * google.script.run → login
  * @param {string} userId
- * @param {string} accessCode — test only
+ * @param {string} accessCode — test only (şifre)
  * @return {{ok: boolean, message: string, session: Object|null}}
  */
 function login(userId, accessCode) {
@@ -174,7 +174,7 @@ function login(userId, accessCode) {
   if (!kod || kod !== String(user.kod || '')) {
     return {
       ok: false,
-      message: 'Erişim kodu hatalı. Test kodunu kontrol edin (ör. TEST1234).',
+      message: 'Şifre hatalı. Test şifresini kontrol edin (ör. TEST1234).',
       session: null
     };
   }
@@ -400,7 +400,7 @@ function denyUnlessWriter() {
     return {
       ok: false,
       message:
-        'Yazma yetkisi yok. Önce panelden kullanıcı seçip test erişim kodu ile giriş yapın.'
+        'Yazma yetkisi yok. Önce panelden kullanıcı seçip test şifresi ile giriş yapın.'
     };
   }
   return {

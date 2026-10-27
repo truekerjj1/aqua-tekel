@@ -234,7 +234,7 @@ function addUserAdmin(kayit) {
   var rol = String(kayit.rol || 'personel').trim();
   var kod = String(kayit.kod || '').trim();
   if (!id || !ad || !kod) {
-    return { ok: false, message: 'Id, ad ve erişim kodu gerekli (test only).' };
+    return { ok: false, message: 'Id, ad ve şifre gerekli (test only).' };
   }
   if (rol !== 'patron' && rol !== 'personel') {
     return { ok: false, message: 'Rol patron veya personel olmalı.' };
