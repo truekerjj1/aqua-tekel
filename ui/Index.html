@@ -153,7 +153,14 @@
             <h2 class="section-title">Gelir ekle</h2>
             <p class="hint">Günlük satış / gelir kaydı. Patron ve personel ekleyebilir.</p>
             <form class="form" id="form-gelir">
-              <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
+              <div class="date-picker" data-date-picker="gelir-tarih">
+                <span class="date-picker-label">Tarih</span>
+                <p class="date-picker-value is-empty" id="gelir-tarih-display" aria-live="polite">
+                  Tarih seçin
+                </p>
+                <input type="hidden" name="tarih" id="gelir-tarih" value="" />
+                <div class="date-cal" id="gelir-tarih-cal" aria-label="Gelir tarih takvimi"></div>
+              </div>
               <label>Tutar <input name="tutar" type="text" inputmode="decimal" placeholder="100" required /></label>
               <label>Açıklama <input name="aciklama" type="text" required /></label>
               <label>Kategori <input name="kategori" type="text" placeholder="Satış" /></label>
@@ -169,7 +176,14 @@
             <h2 class="section-title">Gider ekle</h2>
             <p class="hint">Gider tedarikçi ile ilgili değildir. Kategori seçin.</p>
             <form class="form" id="form-gider">
-              <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
+              <div class="date-picker" data-date-picker="gider-tarih">
+                <span class="date-picker-label">Tarih</span>
+                <p class="date-picker-value is-empty" id="gider-tarih-display" aria-live="polite">
+                  Tarih seçin
+                </p>
+                <input type="hidden" name="tarih" id="gider-tarih" value="" />
+                <div class="date-cal" id="gider-tarih-cal" aria-label="Gider tarih takvimi"></div>
+              </div>
               <label>Tutar <input name="tutar" type="text" inputmode="decimal" placeholder="50" required /></label>
               <label>Açıklama <input name="aciklama" type="text" required /></label>
               <label>
@@ -199,7 +213,14 @@
             <h2 class="section-title">Ödeme ekle</h2>
             <p class="hint">Nakit / Kredi kartı borcu düşürür. Vadeli: cari kayıt, borç aynı kalır. Dekont max ~5 MB.</p>
             <form class="form" id="form-odeme">
-              <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
+              <div class="date-picker" data-date-picker="odeme-tarih">
+                <span class="date-picker-label">Tarih</span>
+                <p class="date-picker-value is-empty" id="odeme-tarih-display" aria-live="polite">
+                  Tarih seçin
+                </p>
+                <input type="hidden" name="tarih" id="odeme-tarih" value="" />
+                <div class="date-cal" id="odeme-tarih-cal" aria-label="Ödeme tarih takvimi"></div>
+              </div>
               <label>
                 Tedarikçi
                 <select name="tedarikci" id="select-odeme-tedarikci" required>
@@ -234,7 +255,14 @@
             <p class="hint" id="hint-fatura">Patron ve personel fatura ekleyebilir. Personel kayıtları onaya düşer.</p>
             <form class="form" id="form-fatura">
               <label>Fatura no <input name="faturaNo" type="text" required /></label>
-              <label>Tarih <input name="tarih" type="text" placeholder="25.10.2026" required /></label>
+              <div class="date-picker" data-date-picker="fatura-tarih">
+                <span class="date-picker-label">Tarih</span>
+                <p class="date-picker-value is-empty" id="fatura-tarih-display" aria-live="polite">
+                  Tarih seçin
+                </p>
+                <input type="hidden" name="tarih" id="fatura-tarih" value="" />
+                <div class="date-cal" id="fatura-tarih-cal" aria-label="Fatura tarih takvimi"></div>
+              </div>
               <label>
                 Tedarikçi
                 <select name="tedarikci" id="select-fatura-tedarikci" required>
@@ -340,25 +368,25 @@
                 </select>
               </label>
               <div class="date-range-pickers" role="group" aria-label="Tarih aralığı">
-                <div class="date-picker" data-admin-date="baslangic">
+                <div class="date-picker" data-date-picker="admin-baslangic">
                   <span class="date-picker-label">Başlangıç</span>
                   <p class="date-picker-value is-empty" id="admin-baslangic-display" aria-live="polite">
                     Tarih seçin
                   </p>
                   <input type="hidden" name="baslangic" id="admin-baslangic" value="" />
-                  <div class="date-cal" id="admin-cal-baslangic" aria-label="Başlangıç takvimi"></div>
-                  <button type="button" class="btn-ghost date-picker-clear" data-clear="baslangic" hidden>
+                  <div class="date-cal" id="admin-baslangic-cal" aria-label="Başlangıç takvimi"></div>
+                  <button type="button" class="btn-ghost date-picker-clear" data-clear="admin-baslangic" hidden>
                     Temizle
                   </button>
                 </div>
-                <div class="date-picker" data-admin-date="bitis">
+                <div class="date-picker" data-date-picker="admin-bitis">
                   <span class="date-picker-label">Bitiş</span>
                   <p class="date-picker-value is-empty" id="admin-bitis-display" aria-live="polite">
                     Tarih seçin
                   </p>
                   <input type="hidden" name="bitis" id="admin-bitis" value="" />
-                  <div class="date-cal" id="admin-cal-bitis" aria-label="Bitiş takvimi"></div>
-                  <button type="button" class="btn-ghost date-picker-clear" data-clear="bitis" hidden>
+                  <div class="date-cal" id="admin-bitis-cal" aria-label="Bitiş takvimi"></div>
+                  <button type="button" class="btn-ghost date-picker-clear" data-clear="admin-bitis" hidden>
                     Temizle
                   </button>
                 </div>
