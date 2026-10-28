@@ -312,237 +312,347 @@ function adminWeekPresetRange_(preset) {
   if (typeof resolveWeekRange_ === 'function') {
     var mode = p === 'current' || p === 'bu' || p === 'bu_hafta' ? 'current' : 'previous';
     var r = resolveWeekRange_(mode, new Date());
-    return { baslangic: r.baslangic, bitis: r.bitis };
+    return {
+      baslangic: r.baslangic,
+      bitis: r.bitis,
+      baslangicTr: r.baslangicTr,
+      bitisTr: r.bitisTr,
+      weekLabel: r.weekLabel || (mode === 'current' ? 'bu hafta' : 'önceki hafta')
+    };
   }
   return null;
 }
 
 /**
- * Kullanıcı adı eşleşmesi (ad veya id).
- * @param {*} kullanici
+ * Filtre tokenını temizler: "Fatih Toprak (patron)" → "Fatih Toprak".
+ * @param {*} s
+ * @return {string}
+ */
+function normalizeUserFilterToken_(s) {
+  var t = String(s == null ? '' : s).trim();
+  if (!t) return '';
+  t = t.replace(/\s*\((patron|personel|misafir)\)\s*$/i, '').trim();
+  return t;
+}
+
+/**
+ * yyyy-MM-dd → dd.MM.yyyy (istemciye Date nesnesi göndermemek için).
+ * @param {*} val
+ * @return {string}
+ */
+function dateToTr_(val) {
+  var k = parseDateKey_(val);
+  if (!k) {
+    if (val == null || val === '') return '';
+    return String(val);
+  }
+  var p = k.split('-');
+  return p[2] + '.' + p[1] + '.' + p[0];
+}
+
+/**
+ * Satırı JSON-güvenli düz nesneye çevirir (Date → dd.MM.yyyy).
+ * @param {Object} r
+ * @param {string} tip
+ * @return {Object}
+ */
+function serializeAdminRow_(r, tip) {
+  r = r || {};
+  var out = {
+    tip: tip || '',
+    row: r.row,
+    tarih: dateToTr_(r.tarih),
+    tutar: r.tutar,
+    kullanici: r.kullanici || '',
+    onayDurum: r.onayDurum || ''
+  };
+  if (tip === 'fatura') {
+    out.faturaNo = r.faturaNo || '';
+    out.tedarikci = r.tedarikci || '';
+    out.ozet = (r.faturaNo || '') + ' · ' + (r.tedarikci || '');
+  } else if (tip === 'odeme') {
+    out.tedarikci = r.tedarikci || '';
+    out.yontem = r.yontem || '';
+    out.ozet = (r.tedarikci || '') + (r.yontem ? ' · ' + r.yontem : '');
+  } else if (tip === 'gelir') {
+    out.aciklama = r.aciklama || '';
+    out.ozet = r.aciklama || '';
+  } else if (tip === 'gider') {
+    out.aciklama = r.aciklama || '';
+    out.kategori = r.kategori || '';
+    out.ozet = (r.aciklama || '') + (r.kategori ? ' · ' + r.kategori : '');
+  }
+  return out;
+}
+
+/**
+ * Kullanıcı adı / id eşleşmesi (rol etiketi ve kısmi ad).
+ * @param {*} kullanici — kayıtta yazan ad veya id
  * @param {string} filtreAd
+ * @param {string=} filtreId
  * @return {boolean}
  */
-function matchKullaniciFilter_(kullanici, filtreAd) {
-  if (!filtreAd) return true;
+function matchKullaniciFilter_(kullanici, filtreAd, filtreId) {
+  var fAd = normalizeKeyPart(normalizeUserFilterToken_(filtreAd));
+  var fId = normalizeKeyPart(filtreId);
+  if (!fAd && !fId) return true;
   var k = normalizeKeyPart(kullanici);
-  var f = normalizeKeyPart(filtreAd);
-  if (!f) return true;
-  if (k === f) return true;
-  // "Sercan" kısmi eşleşme: ad "Sercan Toprak"
-  if (k.indexOf(f) === 0 || k.indexOf(f + ' ') >= 0) return true;
+  if (!k) return false;
+  if (fId && (k === fId || k.indexOf(fId) === 0)) return true;
+  if (!fAd) return false;
+  if (k === fAd) return true;
+  // "Sercan" → "Sercan Toprak" veya kayıt id'si
+  if (k.indexOf(fAd) === 0 || k.indexOf(fAd + ' ') >= 0) return true;
+  if (fAd.indexOf(k) === 0 || fAd.indexOf(k + ' ') >= 0) return true;
   return false;
 }
 
+/**
+ * Filtre aralığını çözer: weekPreset varsa tarih alanlarını ezer.
+ * @param {Object} filtre
+ * @return {{bas: string, bit: string, basTr: string, bitTr: string, weekPreset: string, weekLabel: string}}
+ */
+function resolveAdminFilterRange_(filtre) {
+  filtre = filtre || {};
+  var weekPreset = String(filtre.weekPreset || filtre.hafta || '').trim();
+  var preset = adminWeekPresetRange_(weekPreset);
+  var bas = '';
+  var bit = '';
+  var basTr = '';
+  var bitTr = '';
+  var weekLabel = '';
+  if (preset) {
+    bas = preset.baslangic;
+    bit = preset.bitis;
+    basTr = preset.baslangicTr || dateToTr_(bas);
+    bitTr = preset.bitisTr || dateToTr_(bit);
+    weekLabel = preset.weekLabel || '';
+  } else {
+    if (filtre.baslangic) bas = parseDateKey_(filtre.baslangic) || '';
+    if (filtre.bitis) bit = parseDateKey_(filtre.bitis) || '';
+    basTr = bas ? dateToTr_(bas) : '';
+    bitTr = bit ? dateToTr_(bit) : '';
+  }
+  return {
+    bas: bas,
+    bit: bit,
+    basTr: basTr,
+    bitTr: bitTr,
+    weekPreset: weekPreset,
+    weekLabel: weekLabel
+  };
+}
+
 function getAdminFilteredReport(filtre) {
-  var denied = denyUnlessManager();
-  if (denied) {
+  try {
+    var denied = denyUnlessManager();
+    if (denied) {
+      return {
+        ok: false,
+        message: denied.message,
+        faturalar: [],
+        gelirler: [],
+        giderler: [],
+        odemeler: [],
+        userTotals: [],
+        ozet: null
+      };
+    }
+    filtre = filtre || {};
+    var ted = String(filtre.tedarikci || '').trim();
+    var kullanici = normalizeUserFilterToken_(filtre.kullanici);
+    var kullaniciId = String(filtre.kullaniciId || filtre.userId || '').trim();
+    var range = resolveAdminFilterRange_(filtre);
+    var bas = range.bas;
+    var bit = range.bit;
+
+    var faturalar = [];
+    var odemeler = [];
+    var gelirler = [];
+    var giderler = [];
+    var gelirToplam = 0;
+    var giderToplam = 0;
+    var byUser = {};
+    var i;
+
+    function bumpUser(ad, tip, tutar) {
+      var name = String(ad || '—').trim() || '—';
+      if (!byUser[name]) {
+        byUser[name] = { ad: name, gelir: 0, gider: 0, gelirAdet: 0, giderAdet: 0 };
+      }
+      if (tip === 'gelir') {
+        byUser[name].gelir += tutar;
+        byUser[name].gelirAdet++;
+      } else {
+        byUser[name].gider += tutar;
+        byUser[name].giderAdet++;
+      }
+    }
+
+    var inv = listInvoices(ted ? { tedarikci: ted } : {});
+    if (inv && inv.ok) {
+      for (i = 0; i < inv.rows.length; i++) {
+        if (!inDateRange_(inv.rows[i].tarih, bas, bit)) continue;
+        if (!matchKullaniciFilter_(inv.rows[i].kullanici, kullanici, kullaniciId)) continue;
+        faturalar.push(serializeAdminRow_(inv.rows[i], 'fatura'));
+      }
+    }
+
+    var pay = listPayments(ted ? { tedarikci: ted } : {});
+    if (pay && pay.ok) {
+      for (i = 0; i < pay.rows.length; i++) {
+        if (!inDateRange_(pay.rows[i].tarih, bas, bit)) continue;
+        if (!matchKullaniciFilter_(pay.rows[i].kullanici, kullanici, kullaniciId)) continue;
+        odemeler.push(serializeAdminRow_(pay.rows[i], 'odeme'));
+      }
+    }
+
+    var inc = listIncome({});
+    if (inc && inc.ok) {
+      for (i = 0; i < inc.rows.length; i++) {
+        if (!inDateRange_(inc.rows[i].tarih, bas, bit)) continue;
+        if (!matchKullaniciFilter_(inc.rows[i].kullanici, kullanici, kullaniciId)) continue;
+        gelirler.push(serializeAdminRow_(inc.rows[i], 'gelir'));
+        var gt = parseTutar(inc.rows[i].tutar);
+        if (!isNaN(gt)) {
+          gelirToplam += gt;
+          bumpUser(inc.rows[i].kullanici, 'gelir', gt);
+        }
+      }
+    }
+
+    var exp = listExpense({});
+    if (exp && exp.ok) {
+      for (i = 0; i < exp.rows.length; i++) {
+        if (!inDateRange_(exp.rows[i].tarih, bas, bit)) continue;
+        if (!matchKullaniciFilter_(exp.rows[i].kullanici, kullanici, kullaniciId)) continue;
+        giderler.push(serializeAdminRow_(exp.rows[i], 'gider'));
+        var xt = parseTutar(exp.rows[i].tutar);
+        if (!isNaN(xt)) {
+          giderToplam += xt;
+          bumpUser(exp.rows[i].kullanici, 'gider', xt);
+        }
+      }
+    }
+
+    var userTotals = Object.keys(byUser).map(function (k) {
+      return byUser[k];
+    });
+    userTotals.sort(function (a, b) {
+      return b.gider - a.gider;
+    });
+
+    var label = kullanici || kullaniciId;
+    var aralik =
+      range.basTr && range.bitTr
+        ? range.basTr + ' – ' + range.bitTr
+        : 'seçilen aralık';
+    var ozetMetin = '';
+    if (label) {
+      ozetMetin =
+        label +
+        ' bu aralıkta (' +
+        aralik +
+        ') ' +
+        formatTutarTr(giderToplam) +
+        ' ₺ gider' +
+        (gelirToplam ? ' · ' + formatTutarTr(gelirToplam) + ' ₺ gelir' : '');
+    } else if (range.basTr || range.bitTr || range.weekLabel) {
+      ozetMetin =
+        'Aralık ' +
+        aralik +
+        (range.weekLabel ? ' (' + range.weekLabel + ')' : '') +
+        ': ' +
+        formatTutarTr(giderToplam) +
+        ' ₺ gider · ' +
+        formatTutarTr(gelirToplam) +
+        ' ₺ gelir';
+    }
+
+    return {
+      ok: true,
+      message: ozetMetin || 'Tamam',
+      filtre: {
+        tedarikci: ted,
+        kullanici: kullanici,
+        kullaniciId: kullaniciId,
+        baslangic: bas,
+        bitis: bit,
+        baslangicTr: range.basTr,
+        bitisTr: range.bitTr,
+        weekPreset: range.weekPreset,
+        weekLabel: range.weekLabel
+      },
+      ozet: {
+        kullanici: label,
+        gelirToplam: gelirToplam,
+        giderToplam: giderToplam,
+        gelirAdet: gelirler.length,
+        giderAdet: giderler.length,
+        metin: ozetMetin,
+        aralik: aralik
+      },
+      userTotals: userTotals,
+      faturalar: faturalar,
+      odemeler: odemeler,
+      gelirler: gelirler,
+      giderler: giderler
+    };
+  } catch (e) {
     return {
       ok: false,
-      message: denied.message,
+      message:
+        'Filtre sırasında hata: ' +
+        (e && e.message ? e.message : String(e || 'bilinmeyen')),
       faturalar: [],
       gelirler: [],
       giderler: [],
       odemeler: [],
+      userTotals: [],
       ozet: null
     };
   }
-  filtre = filtre || {};
-  var ted = String(filtre.tedarikci || '').trim();
-  var kullanici = String(filtre.kullanici || '').trim();
-  var bas = '';
-  var bit = '';
-  var preset = adminWeekPresetRange_(filtre.weekPreset || filtre.hafta);
-  if (preset) {
-    bas = preset.baslangic;
-    bit = preset.bitis;
-  }
-  if (filtre.baslangic) bas = parseDateKey_(filtre.baslangic) || bas;
-  if (filtre.bitis) bit = parseDateKey_(filtre.bitis) || bit;
-
-  var faturalar = [];
-  var odemeler = [];
-  var gelirler = [];
-  var giderler = [];
-  var gelirToplam = 0;
-  var giderToplam = 0;
-  var i;
-
-  var inv = listInvoices(ted ? { tedarikci: ted } : {});
-  if (inv.ok) {
-    for (i = 0; i < inv.rows.length; i++) {
-      if (!inDateRange_(inv.rows[i].tarih, bas, bit)) continue;
-      if (!matchKullaniciFilter_(inv.rows[i].kullanici, kullanici)) continue;
-      faturalar.push(inv.rows[i]);
-    }
-  }
-
-  var pay = listPayments(ted ? { tedarikci: ted } : {});
-  if (pay.ok) {
-    for (i = 0; i < pay.rows.length; i++) {
-      if (!inDateRange_(pay.rows[i].tarih, bas, bit)) continue;
-      if (!matchKullaniciFilter_(pay.rows[i].kullanici, kullanici)) continue;
-      odemeler.push(pay.rows[i]);
-    }
-  }
-
-  // Gelir/gider tedarikçiye bağlı değil — tarih + kullanıcı filtresi
-  var inc = listIncome({});
-  if (inc.ok) {
-    for (i = 0; i < inc.rows.length; i++) {
-      if (!inDateRange_(inc.rows[i].tarih, bas, bit)) continue;
-      if (!matchKullaniciFilter_(inc.rows[i].kullanici, kullanici)) continue;
-      gelirler.push(inc.rows[i]);
-      var gt = parseTutar(inc.rows[i].tutar);
-      if (!isNaN(gt)) gelirToplam += gt;
-    }
-  }
-
-  var exp = listExpense({});
-  if (exp.ok) {
-    for (i = 0; i < exp.rows.length; i++) {
-      if (!inDateRange_(exp.rows[i].tarih, bas, bit)) continue;
-      if (!matchKullaniciFilter_(exp.rows[i].kullanici, kullanici)) continue;
-      giderler.push(exp.rows[i]);
-      var xt = parseTutar(exp.rows[i].tutar);
-      if (!isNaN(xt)) giderToplam += xt;
-    }
-  }
-
-  var ozetMetin = '';
-  if (kullanici) {
-    ozetMetin =
-      kullanici +
-      ' bu aralıkta ' +
-      formatTutarTr(giderToplam) +
-      ' ₺ gider' +
-      (gelirToplam ? (' · ' + formatTutarTr(gelirToplam) + ' ₺ gelir') : '');
-  }
-
-  return {
-    ok: true,
-    message: ozetMetin || 'Tamam',
-    filtre: {
-      tedarikci: ted,
-      kullanici: kullanici,
-      baslangic: bas,
-      bitis: bit,
-      weekPreset: String(filtre.weekPreset || filtre.hafta || '')
-    },
-    ozet: {
-      kullanici: kullanici,
-      gelirToplam: gelirToplam,
-      giderToplam: giderToplam,
-      gelirAdet: gelirler.length,
-      giderAdet: giderler.length,
-      metin: ozetMetin
-    },
-    faturalar: faturalar,
-    odemeler: odemeler,
-    gelirler: gelirler,
-    giderler: giderler
-  };
 }
 
 /**
  * Kullanıcı bazlı gelir/gider toplamları (tarih aralığı veya hafta ön ayarı).
  * google.script.run → getAdminUserTotals
- * @param {Object=} filtre — {kullanici, baslangic, bitis, weekPreset}
+ * @param {Object=} filtre — {kullanici, kullaniciId, baslangic, bitis, weekPreset}
  * @return {Object}
  */
 function getAdminUserTotals(filtre) {
-  var denied = denyUnlessManager();
-  if (denied) {
-    return { ok: false, message: denied.message, rows: [], ozet: null };
-  }
-  filtre = filtre || {};
-  var kullanici = String(filtre.kullanici || '').trim();
-  var bas = '';
-  var bit = '';
-  var preset = adminWeekPresetRange_(filtre.weekPreset || filtre.hafta);
-  if (preset) {
-    bas = preset.baslangic;
-    bit = preset.bitis;
-  }
-  if (filtre.baslangic) bas = parseDateKey_(filtre.baslangic) || bas;
-  if (filtre.bitis) bit = parseDateKey_(filtre.bitis) || bit;
-
-  var byUser = {};
-  function bump(ad, tip, tutar) {
-    var name = String(ad || '—').trim() || '—';
-    if (!byUser[name]) {
-      byUser[name] = { ad: name, gelir: 0, gider: 0, gelirAdet: 0, giderAdet: 0 };
+  try {
+    var denied = denyUnlessManager();
+    if (denied) {
+      return { ok: false, message: denied.message, rows: [], ozet: null };
     }
-    if (tip === 'gelir') {
-      byUser[name].gelir += tutar;
-      byUser[name].gelirAdet++;
-    } else {
-      byUser[name].gider += tutar;
-      byUser[name].giderAdet++;
+    // Tek kaynak: filtered report (eşleşme + aralık tutarlı)
+    var rep = getAdminFilteredReport(filtre || {});
+    if (!rep || !rep.ok) {
+      return {
+        ok: false,
+        message: (rep && rep.message) || 'Toplam alınamadı.',
+        rows: [],
+        ozet: null
+      };
     }
-  }
-
-  var i;
-  var inc = listIncome({});
-  if (inc.ok) {
-    for (i = 0; i < inc.rows.length; i++) {
-      var g = inc.rows[i];
-      if (!inDateRange_(g.tarih, bas, bit)) continue;
-      if (!matchKullaniciFilter_(g.kullanici, kullanici)) continue;
-      var gt = parseTutar(g.tutar);
-      if (!isNaN(gt)) bump(g.kullanici, 'gelir', gt);
-    }
-  }
-  var exp = listExpense({});
-  if (exp.ok) {
-    for (i = 0; i < exp.rows.length; i++) {
-      var x = exp.rows[i];
-      if (!inDateRange_(x.tarih, bas, bit)) continue;
-      if (!matchKullaniciFilter_(x.kullanici, kullanici)) continue;
-      var xt = parseTutar(x.tutar);
-      if (!isNaN(xt)) bump(x.kullanici, 'gider', xt);
-    }
-  }
-
-  var rows = Object.keys(byUser).map(function (k) { return byUser[k]; });
-  rows.sort(function (a, b) { return b.gider - a.gider; });
-
-  var ozet = null;
-  if (kullanici && rows.length) {
-    var r0 = rows[0];
-    ozet = {
-      kullanici: r0.ad,
-      giderToplam: r0.gider,
-      gelirToplam: r0.gelir,
-      metin:
-        r0.ad +
-        ' bu aralıkta ' +
-        formatTutarTr(r0.gider) +
-        ' ₺ gider' +
-        (r0.gelir ? (' · ' + formatTutarTr(r0.gelir) + ' ₺ gelir') : '')
+    return {
+      ok: true,
+      message: (rep.ozet && rep.ozet.metin) || 'Tamam',
+      filtre: rep.filtre,
+      rows: rep.userTotals || [],
+      ozet: rep.ozet
     };
-  } else if (kullanici) {
-    ozet = {
-      kullanici: kullanici,
-      giderToplam: 0,
-      gelirToplam: 0,
-      metin: kullanici + ' bu aralıkta 0 ₺ gider'
+  } catch (e) {
+    return {
+      ok: false,
+      message: 'Toplam sırasında hata: ' + (e && e.message ? e.message : String(e)),
+      rows: [],
+      ozet: null
     };
   }
-
-  return {
-    ok: true,
-    message: (ozet && ozet.metin) || 'Tamam',
-    filtre: { kullanici: kullanici, baslangic: bas, bitis: bit },
-    rows: rows,
-    ozet: ozet
-  };
 }
 
-/**
- * Aylık fatura giriş + ödeme grafikleri için veri.
- * @return {{ok: boolean, message: string, labels: string[], fatura: number[], odeme: number[]}}
- */
 function getAdminMonthlyCharts() {
   var denied = denyUnlessManager();
   if (denied) {

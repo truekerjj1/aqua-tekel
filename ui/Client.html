@@ -1277,16 +1277,121 @@
     function fillAdminKullaniciSelect(rows) {
       var sel = document.getElementById('select-admin-kullanici');
       if (!sel) return;
-      var prev = sel.value;
+      var prevId = sel.getAttribute('data-selected-id') || '';
+      var prevVal = sel.value;
       sel.innerHTML = '<option value="">Tümü</option>';
       (rows || []).forEach(function (u) {
         if (u && u.aktif === false) return;
         var opt = document.createElement('option');
-        opt.value = u.ad || u.id || '';
-        opt.textContent = (u.ad || u.id || '') + (u.rol ? ' (' + u.rol + ')' : '');
+        var ad = u.ad || u.id || '';
+        var id = u.id || '';
+        // value = ad (sheet Kullanici ile eşleşir); id ayrı data-* 
+        opt.value = ad;
+        opt.setAttribute('data-user-id', id);
+        opt.setAttribute('data-user-ad', ad);
+        opt.textContent = ad + (u.rol ? ' (' + u.rol + ')' : '');
         sel.appendChild(opt);
       });
-      if (prev) sel.value = prev;
+      if (prevId) {
+        for (var i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].getAttribute('data-user-id') === prevId) {
+            sel.selectedIndex = i;
+            break;
+          }
+        }
+      } else if (prevVal) {
+        sel.value = prevVal;
+      }
+    }
+
+    function clearAdminFilterUi(msgText, ok) {
+      var ozetEl = document.getElementById('admin-user-ozet');
+      if (ozetEl) {
+        ozetEl.hidden = true;
+        ozetEl.textContent = '';
+      }
+      renderList('list-admin-filtre', [], null);
+      renderList('list-admin-user-totals', [], null);
+      if (msgText != null) {
+        setMsg('msg-admin-filtre', msgText, !!ok);
+      }
+    }
+
+    function readAdminFilterPayload(form) {
+      var data = formValues(form);
+      var sel = document.getElementById('select-admin-kullanici');
+      var opt = sel && sel.options ? sel.options[sel.selectedIndex] : null;
+      var ad = '';
+      var id = '';
+      if (opt) {
+        ad = opt.getAttribute('data-user-ad') || opt.value || '';
+        id = opt.getAttribute('data-user-id') || '';
+        // Görünen metinden "(patron)" sızıntısına karşı
+        ad = String(ad || '')
+          .replace(/\s*\((patron|personel|misafir)\)\s*$/i, '')
+          .trim();
+      }
+      data.kullanici = ad;
+      data.kullaniciId = id;
+      if (sel) sel.setAttribute('data-selected-id', id);
+      // Hafta ön ayarı varken takvim artıkları sunucuyu şaşırtmasın
+      if (data.weekPreset) {
+        data.baslangic = '';
+        data.bitis = '';
+      }
+      return data;
+    }
+
+    function renderAdminFilterResult(res) {
+      var ozetEl = document.getElementById('admin-user-ozet');
+      if (ozetEl) {
+        if (res.ozet && res.ozet.metin) {
+          ozetEl.hidden = false;
+          ozetEl.textContent = res.ozet.metin;
+        } else {
+          ozetEl.hidden = true;
+          ozetEl.textContent = '';
+        }
+      }
+      setMsg(
+        'msg-admin-filtre',
+        (res.ozet && res.ozet.metin) || res.message || 'Filtre uygulandı.',
+        true
+      );
+      var items = [];
+      function pushRows(arr, tip) {
+        (arr || []).forEach(function (r) {
+          items.push({
+            tip: tip,
+            tarih: r.tarih,
+            tutar: r.tutar,
+            ozet: r.ozet || '',
+            kullanici: r.kullanici || '',
+            onayDurum: r.onayDurum || ''
+          });
+        });
+      }
+      pushRows(res.faturalar, 'fatura');
+      pushRows(res.odemeler, 'odeme');
+      pushRows(res.gelirler, 'gelir');
+      pushRows(res.giderler, 'gider');
+      renderList('list-admin-filtre', items, activityItemHtml);
+      renderList('list-admin-user-totals', res.userTotals || [], function (u) {
+        return (
+          '<div class="debt-row"><span>' +
+          escapeText(u.ad) +
+          '</span><span class="borc-value">' +
+          formatTutar(u.gider) +
+          ' ₺ gider</span></div>' +
+          '<span class="muted">' +
+          formatTutar(u.gelir) +
+          ' ₺ gelir · ' +
+          escapeText(String(u.giderAdet || 0)) +
+          ' gider / ' +
+          escapeText(String(u.gelirAdet || 0)) +
+          ' gelir</span>'
+        );
+      });
     }
 
     function loadAdminUsers() {
@@ -1777,110 +1882,52 @@
 
     var formAdminFiltre = document.getElementById('form-admin-filtre');
     if (formAdminFiltre) {
+      var weekSel = document.getElementById('select-admin-week');
+      if (weekSel) {
+        weekSel.addEventListener('change', function () {
+          // Ön ayar seçilince eski takvim değerlerini temizle (görünür + gizli)
+          if (weekSel.value) {
+            if (typeof setDatePickerValue === 'function') {
+              setDatePickerValue('admin-baslangic', '');
+              setDatePickerValue('admin-bitis', '');
+            } else {
+              var b = document.getElementById('admin-baslangic');
+              var e = document.getElementById('admin-bitis');
+              if (b) b.value = '';
+              if (e) e.value = '';
+            }
+          }
+        });
+      }
       formAdminFiltre.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!hasGas()) return;
-        var data = formValues(formAdminFiltre);
+        // Önceki kullanıcının özetini hemen temizle (stale UI)
+        clearAdminFilterUi('Filtre uygulanıyor…', true);
+        var data = readAdminFilterPayload(formAdminFiltre);
+        var btn = formAdminFiltre.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
         google.script.run
           .withSuccessHandler(function (res) {
+            if (btn) btn.disabled = false;
             if (!res || !res.ok) {
-              setMsg(
-                'msg-admin-filtre',
+              clearAdminFilterUi(
                 (res && res.message) || 'Filtre başarısız.',
                 false
               );
               return;
             }
-            var ozetEl = document.getElementById('admin-user-ozet');
-            if (ozetEl) {
-              if (res.ozet && res.ozet.metin) {
-                ozetEl.hidden = false;
-                ozetEl.textContent = res.ozet.metin;
-              } else {
-                ozetEl.hidden = true;
-                ozetEl.textContent = '';
-              }
-            }
-            setMsg(
-              'msg-admin-filtre',
-              (res.ozet && res.ozet.metin) || 'Filtre uygulandı.',
-              true
-            );
-            var items = [];
-            (res.faturalar || []).forEach(function (r) {
-              items.push({
-                tip: 'fatura',
-                tarih: r.tarih,
-                tutar: r.tutar,
-                ozet: (r.faturaNo || '') + ' · ' + (r.tedarikci || ''),
-                kullanici: r.kullanici || '',
-                onayDurum: r.onayDurum || ''
-              });
-            });
-            (res.odemeler || []).forEach(function (r) {
-              items.push({
-                tip: 'odeme',
-                tarih: r.tarih,
-                tutar: r.tutar,
-                ozet: (r.tedarikci || '') + ' · ' + (r.yontem || ''),
-                kullanici: r.kullanici || '',
-                onayDurum: r.onayDurum || ''
-              });
-            });
-            (res.gelirler || []).forEach(function (r) {
-              items.push({
-                tip: 'gelir',
-                tarih: r.tarih,
-                tutar: r.tutar,
-                ozet: r.aciklama || '',
-                kullanici: r.kullanici || '',
-                onayDurum: ''
-              });
-            });
-            (res.giderler || []).forEach(function (r) {
-              items.push({
-                tip: 'gider',
-                tarih: r.tarih,
-                tutar: r.tutar,
-                ozet: (r.aciklama || '') + (r.kategori ? ' · ' + r.kategori : ''),
-                kullanici: r.kullanici || '',
-                onayDurum: ''
-              });
-            });
-            renderList('list-admin-filtre', items, activityItemHtml);
-
-            // Kullanıcı bazlı gider/gelir özeti (aynı filtre)
-            google.script.run
-              .withSuccessHandler(function (tot) {
-                var rows = (tot && tot.ok && tot.rows) || [];
-                renderList('list-admin-user-totals', rows, function (u) {
-                  return (
-                    '<div class="debt-row"><span>' +
-                    escapeText(u.ad) +
-                    '</span><span class="borc-value">' +
-                    formatTutar(u.gider) +
-                    ' ₺ gider</span></div>' +
-                    '<span class="muted">' +
-                    formatTutar(u.gelir) +
-                    ' ₺ gelir · ' +
-                    escapeText(String(u.giderAdet || 0)) +
-                    ' gider / ' +
-                    escapeText(String(u.gelirAdet || 0)) +
-                    ' gelir</span>'
-                  );
-                });
-              })
-              .withFailureHandler(function () {
-                renderList('list-admin-user-totals', [], function () { return ''; });
-              })
-              .getAdminUserTotals({
-                kullanici: data.kullanici || '',
-                baslangic: data.baslangic || '',
-                bitis: data.bitis || '',
-                weekPreset: data.weekPreset || ''
-              });
+            renderAdminFilterResult(res);
           })
-          .withFailureHandler(rpcFail('msg-admin-filtre'))
+          .withFailureHandler(
+            rpcFail('msg-admin-filtre', function () {
+              if (btn) btn.disabled = false;
+              clearAdminFilterUi(
+                'Sunucuya erişilemiyor. Filtre sonucu temizlendi — tekrar deneyin.',
+                false
+              );
+            })
+          )
           .getAdminFilteredReport(data);
       });
     }
