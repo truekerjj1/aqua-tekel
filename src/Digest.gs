@@ -1,8 +1,10 @@
 /**
  * Aqua Tekel — Pazartesi 09:00 Europe/Istanbul haftalık özet (sandbox)
  *
- * Önceki takvim haftası (Pzt–Paz): ödemeler (toplam + firma), faturalar,
- * gelir/gider, başarılı giriş sayıları. Son özet PropertiesService’te saklanır.
+ * Varsayılan: önceki takvim haftası (Pzt–Paz). Simülasyonda weekMode:
+ *   previous | current | auto (önceki boşsa bu hafta).
+ * Ödemeler (toplam + firma), faturalar, gelir/gider (toplam + kullanıcı),
+ * başarılı girişler. Son özet PropertiesService’te saklanır.
  * E-posta: MailApp (isteğe bağlı; scope yoksa yalnız in-app).
  *
  * Trigger: installWeeklyDigestTrigger() → ScriptApp Pazartesi 09:00 Istanbul.
@@ -23,24 +25,16 @@ function digestDateKey_(d) {
 }
 
 /**
- * Önceki takvim haftası Pazartesi–Pazar (İstanbul).
- * Pazartesi sabah brifingi: tamamlanan haftayı özetler.
- * @param {Date=} ref
+ * İstanbul’da verilen referans günün bulunduğu haftanın Pzt–Paz aralığı.
+ * @param {Date} noonUtc — UTC öğlen referansı (hafta kayması önlemek için)
+ * @param {number} weekOffset — 0 = bu hafta, -1 = önceki hafta
  * @return {{baslangic: string, bitis: string, baslangicTr: string, bitisTr: string}}
  */
-function previousWeekRangeIstanbul_(ref) {
-  ref = ref || new Date();
-  var key = digestDateKey_(ref);
-  var parts = key.split('-');
-  var y = Number(parts[0]);
-  var m = Number(parts[1]) - 1;
-  var day = Number(parts[2]);
-  // UTC öğlen ile hafta kayması önlenir
-  var noon = new Date(Date.UTC(y, m, day, 9, 0, 0));
-  var dow = Number(Utilities.formatDate(noon, 'Europe/Istanbul', 'u')); // 1=Pzt … 7=Paz
-  var thisMon = new Date(noon.getTime() - (dow - 1) * 86400000);
-  var prevMon = new Date(thisMon.getTime() - 7 * 86400000);
-  var prevSun = new Date(prevMon.getTime() + 6 * 86400000);
+function weekRangeFromNoon_(noonUtc, weekOffset) {
+  var dow = Number(Utilities.formatDate(noonUtc, 'Europe/Istanbul', 'u')); // 1=Pzt … 7=Paz
+  var thisMon = new Date(noonUtc.getTime() - (dow - 1) * 86400000);
+  var mon = new Date(thisMon.getTime() + weekOffset * 7 * 86400000);
+  var sun = new Date(mon.getTime() + 6 * 86400000);
   function tr(d) {
     return Utilities.formatDate(d, 'Europe/Istanbul', 'dd.MM.yyyy');
   }
@@ -48,11 +42,125 @@ function previousWeekRangeIstanbul_(ref) {
     return Utilities.formatDate(d, 'Europe/Istanbul', 'yyyy-MM-dd');
   }
   return {
-    baslangic: iso(prevMon),
-    bitis: iso(prevSun),
-    baslangicTr: tr(prevMon),
-    bitisTr: tr(prevSun)
+    baslangic: iso(mon),
+    bitis: iso(sun),
+    baslangicTr: tr(mon),
+    bitisTr: tr(sun)
   };
+}
+
+/**
+ * Referans tarihin UTC öğlen karşılığı (İstanbul gününe göre).
+ * @param {Date=} ref
+ * @return {Date}
+ */
+function istanbulNoonUtc_(ref) {
+  ref = ref || new Date();
+  var key = digestDateKey_(ref);
+  var parts = key.split('-');
+  var y = Number(parts[0]);
+  var m = Number(parts[1]) - 1;
+  var day = Number(parts[2]);
+  return new Date(Date.UTC(y, m, day, 9, 0, 0));
+}
+
+/**
+ * Önceki takvim haftası Pazartesi–Pazar (İstanbul).
+ * Pazartesi sabah brifingi: tamamlanan haftayı özetler.
+ * @param {Date=} ref
+ * @return {{baslangic: string, bitis: string, baslangicTr: string, bitisTr: string}}
+ */
+function previousWeekRangeIstanbul_(ref) {
+  return weekRangeFromNoon_(istanbulNoonUtc_(ref), -1);
+}
+
+/**
+ * Bu takvim haftası Pazartesi–Pazar (İstanbul).
+ * @param {Date=} ref
+ * @return {{baslangic: string, bitis: string, baslangicTr: string, bitisTr: string}}
+ */
+function currentWeekRangeIstanbul_(ref) {
+  return weekRangeFromNoon_(istanbulNoonUtc_(ref), 0);
+}
+
+/**
+ * weekMode: previous | current | auto
+ * @param {string=} mode
+ * @param {Date=} ref
+ * @return {string}
+ */
+function normalizeWeekMode_(mode) {
+  var m = String(mode || '').trim().toLowerCase();
+  if (m === 'current' || m === 'bu' || m === 'bu_hafta' || m === 'this') {
+    return 'current';
+  }
+  if (m === 'auto' || m === 'otomatik') {
+    return 'auto';
+  }
+  return 'previous';
+}
+
+/**
+ * Seçilen hafta aralığını döndürür (etiketli).
+ * @param {string} mode
+ * @param {Date=} ref
+ * @return {{baslangic: string, bitis: string, baslangicTr: string, bitisTr: string, weekMode: string, weekLabel: string}}
+ */
+function resolveWeekRange_(mode, ref) {
+  mode = normalizeWeekMode_(mode);
+  var range;
+  var label;
+  if (mode === 'current') {
+    range = currentWeekRangeIstanbul_(ref);
+    label = 'bu hafta';
+  } else {
+    range = previousWeekRangeIstanbul_(ref);
+    label = 'önceki hafta';
+    mode = 'previous';
+  }
+  return {
+    baslangic: range.baslangic,
+    bitis: range.bitis,
+    baslangicTr: range.baslangicTr,
+    bitisTr: range.bitisTr,
+    weekMode: mode,
+    weekLabel: label
+  };
+}
+
+/**
+ * Aralıkta herhangi bir gelir/gider/ödeme/fatura var mı?
+ * @param {string} bas
+ * @param {string} bit
+ * @return {boolean}
+ */
+function hasActivityInRange_(bas, bit) {
+  var i;
+  var pay = listPayments({});
+  if (pay && pay.ok) {
+    for (i = 0; i < pay.rows.length; i++) {
+      if (inDateRange_(pay.rows[i].tarih, bas, bit)) return true;
+    }
+  }
+  var inv = listInvoices({});
+  if (inv && inv.ok) {
+    for (i = 0; i < inv.rows.length; i++) {
+      if (inDateRange_(inv.rows[i].tarih, bas, bit)) return true;
+    }
+  }
+  var inc = listIncome({});
+  if (inc && inc.ok) {
+    for (i = 0; i < inc.rows.length; i++) {
+      if (inDateRange_(inc.rows[i].tarih, bas, bit)) return true;
+    }
+  }
+  var exp = listExpense({});
+  if (exp && exp.ok) {
+    for (i = 0; i < exp.rows.length; i++) {
+      if (inDateRange_(exp.rows[i].tarih, bas, bit)) return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -119,13 +227,49 @@ function countLoginsInRange_(bas, bit) {
 }
 
 /**
- * Haftalık özet nesnesini üretir (önceki Pzt–Paz).
+ * Kullanıcı bazlı tutar haritasını sıralı diziye çevirir.
+ * @param {Object} map
+ * @return {Array<{ad: string, tutar: number, adet: number}>}
+ */
+function mapToUserTotals_(map) {
+  var list = Object.keys(map).map(function (k) {
+    return map[k];
+  });
+  list.sort(function (a, b) {
+    return b.tutar - a.tutar;
+  });
+  return list;
+}
+
+/**
+ * Haftalık özet nesnesini üretir.
+ * opts.weekMode: previous (varsayılan tetikleyici) | current | auto
+ * auto: önceki hafta boşsa bu haftaya düşer (simülasyon için).
  * @param {Object=} opts
  * @return {Object}
  */
 function buildWeeklyDigest_(opts) {
   opts = opts || {};
-  var range = previousWeekRangeIstanbul_(opts.refDate ? new Date(opts.refDate) : new Date());
+  var ref = opts.refDate ? new Date(opts.refDate) : new Date();
+  var requested = normalizeWeekMode_(opts.weekMode || 'previous');
+  var resolvedMode = requested;
+  var autoFellBack = false;
+  var note = '';
+
+  if (requested === 'auto') {
+    var prev = previousWeekRangeIstanbul_(ref);
+    if (hasActivityInRange_(prev.baslangic, prev.bitis)) {
+      resolvedMode = 'previous';
+      note = 'Otomatik: önceki haftada kayıt var.';
+    } else {
+      resolvedMode = 'current';
+      autoFellBack = true;
+      note =
+        'Otomatik: önceki hafta boş — bu haftanın (Pzt–bugün/Paz) kayıtları özetlendi.';
+    }
+  }
+
+  var range = resolveWeekRange_(resolvedMode, ref);
   var bas = range.baslangic;
   var bit = range.bitis;
 
@@ -138,7 +282,16 @@ function buildWeeklyDigest_(opts) {
   var gelirAdet = 0;
   var giderToplam = 0;
   var giderAdet = 0;
+  var gelirByUser = {};
+  var giderByUser = {};
   var i;
+
+  function bumpUser(map, ad, tutar) {
+    var name = String(ad || '—').trim() || '—';
+    if (!map[name]) map[name] = { ad: name, tutar: 0, adet: 0 };
+    map[name].tutar += tutar;
+    map[name].adet++;
+  }
 
   var pay = listPayments({});
   if (pay && pay.ok) {
@@ -177,6 +330,7 @@ function buildWeeklyDigest_(opts) {
       if (isNaN(gt)) continue;
       gelirToplam += gt;
       gelirAdet++;
+      bumpUser(gelirByUser, gr.kullanici, gt);
     }
   }
 
@@ -189,6 +343,7 @@ function buildWeeklyDigest_(opts) {
       if (isNaN(et)) continue;
       giderToplam += et;
       giderAdet++;
+      bumpUser(giderByUser, er.kullanici, et);
     }
   }
 
@@ -199,6 +354,8 @@ function buildWeeklyDigest_(opts) {
     return b.tutar - a.tutar;
   });
 
+  var gelirUsers = mapToUserTotals_(gelirByUser);
+  var giderUsers = mapToUserTotals_(giderByUser);
   var logins = countLoginsInRange_(bas, bit);
   var now = new Date();
 
@@ -208,13 +365,20 @@ function buildWeeklyDigest_(opts) {
     generatedAtTr: Utilities.formatDate(now, 'Europe/Istanbul', 'dd.MM.yyyy HH:mm'),
     timezone: 'Europe/Istanbul',
     period: range,
+    weekMode: range.weekMode,
+    weekLabel: range.weekLabel,
+    requestedWeekMode: requested,
+    autoFellBack: autoFellBack,
+    note: note,
     odeme: { toplam: odemeToplam, adet: odemeAdet, byFirm: firms },
     fatura: { toplam: faturaToplam, adet: faturaAdet },
-    gelir: { toplam: gelirToplam, adet: gelirAdet },
-    gider: { toplam: giderToplam, adet: giderAdet },
+    gelir: { toplam: gelirToplam, adet: gelirAdet, byUser: gelirUsers },
+    gider: { toplam: giderToplam, adet: giderAdet, byUser: giderUsers },
     giris: logins,
     metin: formatWeeklyDigestText_({
       range: range,
+      weekLabel: range.weekLabel,
+      note: note,
       odemeToplam: odemeToplam,
       odemeAdet: odemeAdet,
       firms: firms,
@@ -222,6 +386,8 @@ function buildWeeklyDigest_(opts) {
       faturaAdet: faturaAdet,
       gelirToplam: gelirToplam,
       giderToplam: giderToplam,
+      gelirUsers: gelirUsers,
+      giderUsers: giderUsers,
       girisToplam: logins.toplam,
       byUser: logins.byUser
     })
@@ -236,10 +402,21 @@ function buildWeeklyDigest_(opts) {
 function formatWeeklyDigestText_(d) {
   var lines = [];
   lines.push('Aqua Tekel — Haftalık Özet');
-  lines.push('Dönem: ' + d.range.baslangicTr + ' – ' + d.range.bitisTr + ' (önceki hafta)');
+  lines.push(
+    'Dönem: ' +
+      d.range.baslangicTr +
+      ' – ' +
+      d.range.bitisTr +
+      ' (' +
+      (d.weekLabel || 'önceki hafta') +
+      ')'
+  );
+  if (d.note) {
+    lines.push(d.note);
+  }
   lines.push('');
   lines.push(
-    'Bu hafta toplam ' +
+    'Bu dönemde toplam ' +
       formatDigestMoney_(d.odemeToplam) +
       ' ₺ ödeme yapıldı (' +
       d.odemeAdet +
@@ -270,6 +447,36 @@ function formatWeeklyDigestText_(d) {
       formatDigestMoney_(d.giderToplam) +
       ' ₺'
   );
+  if (d.giderUsers && d.giderUsers.length) {
+    lines.push('Kullanıcı bazlı gider:');
+    for (var g = 0; g < d.giderUsers.length; g++) {
+      var gu = d.giderUsers[g];
+      lines.push(
+        '  · ' +
+          gu.ad +
+          ': ' +
+          formatDigestMoney_(gu.tutar) +
+          ' ₺ gider (' +
+          gu.adet +
+          ' kayıt)'
+      );
+    }
+  }
+  if (d.gelirUsers && d.gelirUsers.length) {
+    lines.push('Kullanıcı bazlı gelir:');
+    for (var h = 0; h < d.gelirUsers.length; h++) {
+      var hu = d.gelirUsers[h];
+      lines.push(
+        '  · ' +
+          hu.ad +
+          ': ' +
+          formatDigestMoney_(hu.tutar) +
+          ' ₺ gelir (' +
+          hu.adet +
+          ' kayıt)'
+      );
+    }
+  }
   lines.push('Kullanıcı girişleri: ' + d.girisToplam + ' başarılı giriş.');
   if (d.byUser && d.byUser.length) {
     for (var j = 0; j < d.byUser.length; j++) {
@@ -302,7 +509,7 @@ function storeLastWeeklyDigest_(digest) {
 /**
  * Zamanlayıcı veya menü / istemci: haftalık özeti üret, sakla, isteğe bağlı e-posta.
  * google.script.run → runWeeklyDigest
- * @param {Object=} opts
+ * @param {Object=} opts — {sendEmail, fromTrigger, weekMode, refDate}
  * @return {Object}
  */
 function runWeeklyDigest(opts) {
@@ -314,6 +521,15 @@ function runWeeklyDigest(opts) {
     if (denied) {
       return { ok: false, message: denied.message, digest: null };
     }
+  }
+
+  // Tetikleyici daima önceki tamamlanan haftayı özetler.
+  if (fromTrigger && !opts.weekMode) {
+    opts.weekMode = 'previous';
+  }
+  // Manuel simülasyonda varsayılan: otomatik (önceki boşsa bu hafta).
+  if (!fromTrigger && !opts.weekMode) {
+    opts.weekMode = 'auto';
   }
 
   var digest = buildWeeklyDigest_(opts);
@@ -348,9 +564,13 @@ function runWeeklyDigest(opts) {
     mailNote = 'E-posta simülasyonunda gönderilmedi.';
   }
 
+  var modeNote = digest.note
+    ? ' ' + digest.note
+    : ' Dönem: ' + digest.weekLabel + '.';
+
   return {
     ok: true,
-    message: 'Haftalık özet hazır. ' + mailNote,
+    message: 'Haftalık özet hazır.' + modeNote + ' ' + mailNote,
     mailed: mailed,
     digest: digest
   };
@@ -360,7 +580,7 @@ function runWeeklyDigest(opts) {
  * Zamanlayıcı girişi.
  */
 function triggerWeeklyDigest() {
-  runWeeklyDigest({ fromTrigger: true, sendEmail: true });
+  runWeeklyDigest({ fromTrigger: true, sendEmail: true, weekMode: 'previous' });
 }
 
 /**
@@ -421,6 +641,6 @@ function installWeeklyDigestTrigger() {
   return {
     ok: true,
     message:
-      'Haftalık özet tetikleyicisi kuruldu: her Pazartesi 09:00 Europe/Istanbul → triggerWeeklyDigest.'
+      'Haftalık özet tetikleyicisi kuruldu: her Pazartesi 09:00 Europe/Istanbul → triggerWeeklyDigest (önceki Pzt–Paz).'
   };
 }

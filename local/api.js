@@ -45,25 +45,65 @@ function todayKey() {
   return d.getFullYear() + '-' + mm + '-' + dd;
 }
 
-/** Önceki takvim haftası Pzt–Paz (yerel saat; localhost ≈ Istanbul). */
-function previousWeekRange() {
+/** Hafta aralığı Pzt–Paz (yerel saat; localhost ≈ Istanbul). weekOffset 0=bu, -1=önceki */
+function weekRange(weekOffset) {
   var now = new Date();
   var dow = now.getDay();
   var daysSinceMon = (dow + 6) % 7;
   var thisMon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMon);
-  var prevMon = new Date(thisMon.getFullYear(), thisMon.getMonth(), thisMon.getDate() - 7);
-  var prevSun = new Date(prevMon.getFullYear(), prevMon.getMonth(), prevMon.getDate() + 6);
+  var mon = new Date(
+    thisMon.getFullYear(),
+    thisMon.getMonth(),
+    thisMon.getDate() + weekOffset * 7
+  );
+  var sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
   function iso(d) {
     var mm = String(d.getMonth() + 1).padStart(2, '0');
     var dd = String(d.getDate()).padStart(2, '0');
     return d.getFullYear() + '-' + mm + '-' + dd;
   }
   return {
-    baslangic: iso(prevMon),
-    bitis: iso(prevSun),
-    baslangicTr: formatDateTr(prevMon),
-    bitisTr: formatDateTr(prevSun)
+    baslangic: iso(mon),
+    bitis: iso(sun),
+    baslangicTr: formatDateTr(mon),
+    bitisTr: formatDateTr(sun)
   };
+}
+
+function previousWeekRange() {
+  return weekRange(-1);
+}
+
+function currentWeekRange() {
+  return weekRange(0);
+}
+
+function normalizeWeekMode(mode) {
+  var m = String(mode || '').trim().toLowerCase();
+  if (m === 'current' || m === 'bu' || m === 'bu_hafta' || m === 'this') return 'current';
+  if (m === 'auto' || m === 'otomatik') return 'auto';
+  return 'previous';
+}
+
+function hasActivityInRange(bas, bit) {
+  var files = ['payments', 'invoices', 'income', 'expense'];
+  for (var f = 0; f < files.length; f++) {
+    var rows = store.readJson(files[f], []);
+    for (var i = 0; i < rows.length; i++) {
+      if (inDateRange(rows[i].tarih, bas, bit)) return true;
+    }
+  }
+  return false;
+}
+
+function resolveWeekRange(mode) {
+  mode = normalizeWeekMode(mode);
+  if (mode === 'current') {
+    var cur = currentWeekRange();
+    return Object.assign(cur, { weekMode: 'current', weekLabel: 'bu hafta' });
+  }
+  var prev = previousWeekRange();
+  return Object.assign(prev, { weekMode: 'previous', weekLabel: 'önceki hafta' });
 }
 
 function formatDigestMoney(n) {
@@ -109,8 +149,37 @@ function countLoginsInRange(bas, bit) {
   return { toplam: toplam, byUser: list };
 }
 
-function buildWeeklyDigest() {
-  var range = previousWeekRange();
+function bumpUserMap(map, ad, tutar) {
+  var name = String(ad || '—').trim() || '—';
+  if (!map[name]) map[name] = { ad: name, tutar: 0, adet: 0 };
+  map[name].tutar += tutar;
+  map[name].adet++;
+}
+
+function mapToUserTotals(map) {
+  var list = Object.keys(map).map(function (k) { return map[k]; });
+  list.sort(function (a, b) { return b.tutar - a.tutar; });
+  return list;
+}
+
+function buildWeeklyDigest(opts) {
+  opts = opts || {};
+  var requested = normalizeWeekMode(opts.weekMode || 'auto');
+  var resolvedMode = requested;
+  var autoFellBack = false;
+  var note = '';
+  if (requested === 'auto') {
+    var prevCheck = previousWeekRange();
+    if (hasActivityInRange(prevCheck.baslangic, prevCheck.bitis)) {
+      resolvedMode = 'previous';
+      note = 'Otomatik: önceki haftada kayıt var.';
+    } else {
+      resolvedMode = 'current';
+      autoFellBack = true;
+      note = 'Otomatik: önceki hafta boş — bu haftanın kayıtları özetlendi.';
+    }
+  }
+  var range = resolveWeekRange(resolvedMode);
   var bas = range.baslangic;
   var bit = range.bitis;
   var odemeToplam = 0;
@@ -122,6 +191,8 @@ function buildWeeklyDigest() {
   var gelirAdet = 0;
   var giderToplam = 0;
   var giderAdet = 0;
+  var gelirByUser = {};
+  var giderByUser = {};
 
   store.readJson('payments', []).forEach(function (pr) {
     if (!inDateRange(pr.tarih, bas, bit)) return;
@@ -149,6 +220,7 @@ function buildWeeklyDigest() {
     if (isNaN(gt)) return;
     gelirToplam += gt;
     gelirAdet++;
+    bumpUserMap(gelirByUser, gr.kullanici, gt);
   });
 
   store.readJson('expense', []).forEach(function (er) {
@@ -157,6 +229,7 @@ function buildWeeklyDigest() {
     if (isNaN(et)) return;
     giderToplam += et;
     giderAdet++;
+    bumpUserMap(giderByUser, er.kullanici, et);
   });
 
   var firms = Object.keys(byFirm).map(function (k) {
@@ -166,14 +239,19 @@ function buildWeeklyDigest() {
     return b.tutar - a.tutar;
   });
 
+  var gelirUsers = mapToUserTotals(gelirByUser);
+  var giderUsers = mapToUserTotals(giderByUser);
   var logins = countLoginsInRange(bas, bit);
   var now = new Date();
   var lines = [];
   lines.push('Aqua Tekel — Haftalık Özet');
-  lines.push('Dönem: ' + range.baslangicTr + ' – ' + range.bitisTr + ' (önceki hafta)');
+  lines.push(
+    'Dönem: ' + range.baslangicTr + ' – ' + range.bitisTr + ' (' + range.weekLabel + ')'
+  );
+  if (note) lines.push(note);
   lines.push('');
   lines.push(
-    'Bu hafta toplam ' +
+    'Bu dönemde toplam ' +
       formatDigestMoney(odemeToplam) +
       ' ₺ ödeme yapıldı (' +
       odemeAdet +
@@ -203,6 +281,22 @@ function buildWeeklyDigest() {
       formatDigestMoney(giderToplam) +
       ' ₺'
   );
+  if (giderUsers.length) {
+    lines.push('Kullanıcı bazlı gider:');
+    giderUsers.forEach(function (u) {
+      lines.push(
+        '  · ' + u.ad + ': ' + formatDigestMoney(u.tutar) + ' ₺ gider (' + u.adet + ' kayıt)'
+      );
+    });
+  }
+  if (gelirUsers.length) {
+    lines.push('Kullanıcı bazlı gelir:');
+    gelirUsers.forEach(function (u) {
+      lines.push(
+        '  · ' + u.ad + ': ' + formatDigestMoney(u.tutar) + ' ₺ gelir (' + u.adet + ' kayıt)'
+      );
+    });
+  }
   lines.push('Kullanıcı girişleri: ' + logins.toplam + ' başarılı giriş.');
   logins.byUser.forEach(function (u) {
     lines.push('  · ' + u.ad + ': ' + u.adet);
@@ -215,10 +309,15 @@ function buildWeeklyDigest() {
     timezone: 'Europe/Istanbul',
     simulated: true,
     period: range,
+    weekMode: range.weekMode,
+    weekLabel: range.weekLabel,
+    requestedWeekMode: requested,
+    autoFellBack: autoFellBack,
+    note: note,
     odeme: { toplam: odemeToplam, adet: odemeAdet, byFirm: firms },
     fatura: { toplam: faturaToplam, adet: faturaAdet },
-    gelir: { toplam: gelirToplam, adet: gelirAdet },
-    gider: { toplam: giderToplam, adet: giderAdet },
+    gelir: { toplam: gelirToplam, adet: gelirAdet, byUser: gelirUsers },
+    gider: { toplam: giderToplam, adet: giderAdet, byUser: giderUsers },
     giris: logins,
     metin: lines.join('\n')
   };
@@ -232,12 +331,116 @@ function parseDateKey(val) {
     return val.getFullYear() + '-' + mm + '-' + dd;
   }
   var s = String(val).trim();
-  var m = s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/);
+  var m = s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
   if (m) {
     return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
   }
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    if (s.length > 10) {
+      var parsed = new Date(s);
+      if (!isNaN(parsed.getTime())) {
+        var mm2 = String(parsed.getMonth() + 1).padStart(2, '0');
+        var dd2 = String(parsed.getDate()).padStart(2, '0');
+        return parsed.getFullYear() + '-' + mm2 + '-' + dd2;
+      }
+    }
+    return s.substring(0, 10);
+  }
   return '';
+}
+
+function normalizeUserFilterToken(s) {
+  var t = String(s == null ? '' : s).trim();
+  if (!t) return '';
+  return t.replace(/\s*\((patron|personel|misafir)\)\s*$/i, '').trim();
+}
+
+function dateToTr(val) {
+  var k = parseDateKey(val);
+  if (!k) return val == null || val === '' ? '' : String(val);
+  var p = k.split('-');
+  return p[2] + '.' + p[1] + '.' + p[0];
+}
+
+function matchKullaniciFilter(kullanici, filtreAd, filtreId) {
+  var fAd = normalizeKeyPart(normalizeUserFilterToken(filtreAd));
+  var fId = normalizeKeyPart(filtreId);
+  if (!fAd && !fId) return true;
+  var k = normalizeKeyPart(kullanici);
+  if (!k) return false;
+  if (fId && (k === fId || k.indexOf(fId) === 0)) return true;
+  if (!fAd) return false;
+  if (k === fAd) return true;
+  if (k.indexOf(fAd) === 0 || k.indexOf(fAd + ' ') >= 0) return true;
+  if (fAd.indexOf(k) === 0 || fAd.indexOf(k + ' ') >= 0) return true;
+  return false;
+}
+
+function adminWeekPresetRange(preset) {
+  var p = String(preset || '').trim().toLowerCase();
+  if (!p) return null;
+  var mode = p === 'current' || p === 'bu' || p === 'bu_hafta' ? 'current' : 'previous';
+  return resolveWeekRange(mode);
+}
+
+function resolveAdminFilterRange(filtre) {
+  filtre = filtre || {};
+  var weekPreset = String(filtre.weekPreset || filtre.hafta || '').trim();
+  var preset = adminWeekPresetRange(weekPreset);
+  var bas = '';
+  var bit = '';
+  var basTr = '';
+  var bitTr = '';
+  var weekLabel = '';
+  if (preset) {
+    bas = preset.baslangic;
+    bit = preset.bitis;
+    basTr = preset.baslangicTr || dateToTr(bas);
+    bitTr = preset.bitisTr || dateToTr(bit);
+    weekLabel = preset.weekLabel || '';
+  } else {
+    if (filtre.baslangic) bas = parseDateKey(filtre.baslangic) || '';
+    if (filtre.bitis) bit = parseDateKey(filtre.bitis) || '';
+    basTr = bas ? dateToTr(bas) : '';
+    bitTr = bit ? dateToTr(bit) : '';
+  }
+  return {
+    bas: bas,
+    bit: bit,
+    basTr: basTr,
+    bitTr: bitTr,
+    weekPreset: weekPreset,
+    weekLabel: weekLabel
+  };
+}
+
+function serializeAdminRow(r, tip) {
+  r = r || {};
+  var out = {
+    tip: tip || '',
+    row: r.row,
+    tarih: dateToTr(r.tarih),
+    tutar: r.tutar,
+    kullanici: r.kullanici || '',
+    onayDurum: r.onayDurum || ''
+  };
+  if (tip === 'fatura') {
+    out.faturaNo = r.faturaNo || '';
+    out.tedarikci = r.tedarikci || '';
+    out.ozet = (r.faturaNo || '') + ' · ' + (r.tedarikci || '');
+  } else if (tip === 'odeme') {
+    out.tedarikci = r.tedarikci || '';
+    out.yontem = r.yontem || '';
+    out.ozet = (r.tedarikci || '') + (r.yontem ? ' · ' + r.yontem : '');
+  } else if (tip === 'gelir') {
+    out.aciklama = r.aciklama || '';
+    out.ozet = r.aciklama || '';
+  } else if (tip === 'gider') {
+    out.aciklama = r.aciklama || '';
+    out.kategori = r.kategori || '';
+    out.ozet = (r.aciklama || '') + (r.kategori ? ' · ' + r.kategori : '');
+  }
+  return out;
 }
 
 function monthKey(val) {
@@ -1225,43 +1428,168 @@ var handlers = {
   },
 
   getAdminFilteredReport: function (ctx, filtre) {
-    var denied = denyUnlessManager(ctx);
-    if (denied) {
+    try {
+      var denied = denyUnlessManager(ctx);
+      if (denied) {
+        return {
+          ok: false,
+          message: denied.message,
+          faturalar: [],
+          gelirler: [],
+          giderler: [],
+          odemeler: [],
+          userTotals: [],
+          ozet: null
+        };
+      }
+      filtre = filtre || {};
+      var ted = String(filtre.tedarikci || '').trim();
+      var kullanici = normalizeUserFilterToken(filtre.kullanici);
+      var kullaniciId = String(filtre.kullaniciId || filtre.userId || '').trim();
+      var range = resolveAdminFilterRange(filtre);
+      var bas = range.bas;
+      var bit = range.bit;
+      var byUser = {};
+      function bumpUser(ad, tip, tutar) {
+        var name = String(ad || '—').trim() || '—';
+        if (!byUser[name]) {
+          byUser[name] = { ad: name, gelir: 0, gider: 0, gelirAdet: 0, giderAdet: 0 };
+        }
+        if (tip === 'gelir') {
+          byUser[name].gelir += tutar;
+          byUser[name].gelirAdet++;
+        } else {
+          byUser[name].gider += tutar;
+          byUser[name].giderAdet++;
+        }
+      }
+      var faturalar = withRows(store.readJson('invoices', []))
+        .filter(function (r) {
+          if (ted && normalizeKeyPart(r.tedarikci) !== normalizeKeyPart(ted)) return false;
+          if (!matchKullaniciFilter(r.kullanici, kullanici, kullaniciId)) return false;
+          return inDateRange(r.tarih, bas, bit);
+        })
+        .map(function (r) {
+          return serializeAdminRow(r, 'fatura');
+        });
+      var odemeler = withRows(store.readJson('payments', []))
+        .filter(function (r) {
+          if (ted && normalizeKeyPart(r.tedarikci) !== normalizeKeyPart(ted)) return false;
+          if (!matchKullaniciFilter(r.kullanici, kullanici, kullaniciId)) return false;
+          return inDateRange(r.tarih, bas, bit);
+        })
+        .map(function (r) {
+          return serializeAdminRow(r, 'odeme');
+        });
+      var gelirRaw = store.readJson('income', []).filter(function (r) {
+        if (!matchKullaniciFilter(r.kullanici, kullanici, kullaniciId)) return false;
+        return inDateRange(r.tarih, bas, bit);
+      });
+      var giderRaw = store.readJson('expense', []).filter(function (r) {
+        if (!matchKullaniciFilter(r.kullanici, kullanici, kullaniciId)) return false;
+        return inDateRange(r.tarih, bas, bit);
+      });
+      var gelirToplam = 0;
+      var giderToplam = 0;
+      gelirRaw.forEach(function (r) {
+        var t = parseTutar(r.tutar);
+        if (!isNaN(t)) {
+          gelirToplam += t;
+          bumpUser(r.kullanici, 'gelir', t);
+        }
+      });
+      giderRaw.forEach(function (r) {
+        var t = parseTutar(r.tutar);
+        if (!isNaN(t)) {
+          giderToplam += t;
+          bumpUser(r.kullanici, 'gider', t);
+        }
+      });
+      var gelirler = withRows(gelirRaw).map(function (r) {
+        return serializeAdminRow(r, 'gelir');
+      });
+      var giderler = withRows(giderRaw).map(function (r) {
+        return serializeAdminRow(r, 'gider');
+      });
+      var userTotals = Object.keys(byUser).map(function (k) {
+        return byUser[k];
+      });
+      userTotals.sort(function (a, b) {
+        return b.gider - a.gider;
+      });
+      var label = kullanici || kullaniciId;
+      var aralik =
+        range.basTr && range.bitTr ? range.basTr + ' – ' + range.bitTr : 'seçilen aralık';
+      var ozetMetin = '';
+      if (label) {
+        ozetMetin =
+          label +
+          ' bu aralıkta (' +
+          aralik +
+          ') ' +
+          formatTutarTr(giderToplam) +
+          ' ₺ gider' +
+          (gelirToplam ? ' · ' + formatTutarTr(gelirToplam) + ' ₺ gelir' : '');
+      }
+      return {
+        ok: true,
+        message: ozetMetin || 'Tamam',
+        filtre: {
+          tedarikci: ted,
+          kullanici: kullanici,
+          kullaniciId: kullaniciId,
+          baslangic: bas,
+          bitis: bit,
+          baslangicTr: range.basTr,
+          bitisTr: range.bitTr,
+          weekPreset: range.weekPreset,
+          weekLabel: range.weekLabel
+        },
+        ozet: {
+          kullanici: label,
+          gelirToplam: gelirToplam,
+          giderToplam: giderToplam,
+          gelirAdet: gelirler.length,
+          giderAdet: giderler.length,
+          metin: ozetMetin,
+          aralik: aralik
+        },
+        userTotals: userTotals,
+        faturalar: faturalar,
+        odemeler: odemeler,
+        gelirler: gelirler,
+        giderler: giderler
+      };
+    } catch (e) {
       return {
         ok: false,
-        message: denied.message,
+        message: 'Filtre sırasında hata: ' + (e && e.message ? e.message : String(e)),
         faturalar: [],
         gelirler: [],
         giderler: [],
-        odemeler: []
+        odemeler: [],
+        userTotals: [],
+        ozet: null
       };
     }
-    filtre = filtre || {};
-    var ted = String(filtre.tedarikci || '').trim();
-    var bas = parseDateKey(filtre.baslangic) || '';
-    var bit = parseDateKey(filtre.bitis) || '';
-    var faturalar = withRows(store.readJson('invoices', [])).filter(function (r) {
-      if (ted && normalizeKeyPart(r.tedarikci) !== normalizeKeyPart(ted)) return false;
-      return inDateRange(r.tarih, bas, bit);
-    });
-    var odemeler = withRows(store.readJson('payments', [])).filter(function (r) {
-      if (ted && normalizeKeyPart(r.tedarikci) !== normalizeKeyPart(ted)) return false;
-      return inDateRange(r.tarih, bas, bit);
-    });
-    var gelirler = withRows(store.readJson('income', [])).filter(function (r) {
-      return inDateRange(r.tarih, bas, bit);
-    });
-    var giderler = withRows(store.readJson('expense', [])).filter(function (r) {
-      return inDateRange(r.tarih, bas, bit);
-    });
+  },
+
+  getAdminUserTotals: function (ctx, filtre) {
+    var result = module.exports.getAdminFilteredReport(ctx, filtre || {});
+    if (!result || !result.ok) {
+      return {
+        ok: false,
+        message: (result && result.message) || 'Toplam alınamadı.',
+        rows: [],
+        ozet: null
+      };
+    }
     return {
       ok: true,
-      message: 'Tamam',
-      filtre: { tedarikci: ted, baslangic: bas, bitis: bit },
-      faturalar: faturalar,
-      odemeler: odemeler,
-      gelirler: gelirler,
-      giderler: giderler
+      message: (result.ozet && result.ozet.metin) || 'Tamam',
+      filtre: result.filtre,
+      rows: result.userTotals || [],
+      ozet: result.ozet
     };
   },
 
@@ -1451,12 +1779,18 @@ var handlers = {
       return { ok: false, message: denied.message, digest: null, mailed: false };
     }
     opts = opts || {};
-    var digest = buildWeeklyDigest();
+    if (!opts.weekMode) opts.weekMode = 'auto';
+    var digest = buildWeeklyDigest(opts);
     store.writeJson('weekly-digest', digest);
+    var modeNote = digest.note
+      ? ' ' + digest.note
+      : ' Dönem: ' + digest.weekLabel + '.';
     return {
       ok: true,
       message:
-        'Haftalık özet simüle edildi (e-posta gönderilmedi). Sonuç: local/data/weekly-digest.json',
+        'Haftalık özet simüle edildi (e-posta gönderilmedi).' +
+        modeNote +
+        ' Sonuç: local/data/weekly-digest.json',
       mailed: false,
       digest: digest
     };
